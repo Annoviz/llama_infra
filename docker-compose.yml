@@ -1,0 +1,58 @@
+services:
+  ollama-server:
+    image: ollama/ollama:${OLLAMA_VERSION:-0.5.13-rc5}
+    shm_size: '8gb'
+    ulimits:
+      memlock: -1
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              device_ids: ["${GPU_ID:-0}"]
+              capabilities: [gpu]
+    ports:
+      - 11434:11434
+    volumes:
+      - ${MODELS:-./models}:/models
+      - ./workspace:/app/workspace
+    environment:
+      OLLAMA_MODELS: /models
+      OLLAMA_KV_CACHE_TYPE: q4_0 # can be: f16, q8_0, q4_0
+      OLLAMA_FLASH_ATTENTION: 1
+      OLLAMA_MAX_LOADED_MODELS: 2
+      OLLAMA_NUM_PARALLEL: 1
+      OLLAMA_MAX_QUEUE: 512
+
+
+  anythingllm:
+    image: mintplexlabs/anythingllm:${ANYTHINGLLM_VERSION:-1.7.4}
+    container_name: anythingllm
+    ports:
+    - "3001:3001"
+    cap_add:
+      - SYS_ADMIN
+    environment:
+    # Adjust for your environment
+      - STORAGE_DIR=/app/server/storage
+      - JWT_SECRET="anythingllm_jwt_secret"
+      - LLM_PROVIDER=ollama
+      - OLLAMA_BASE_PATH=http://ollama-server:11434
+      - OLLAMA_MODEL_PREF=llava # llama2, llama3.2
+      - OLLAMA_MODEL_TOKEN_LIMIT=4096
+      - OLLAMA_CONTEXT_LENGTH=8192
+      - EMBEDDING_ENGINE=ollama
+      - EMBEDDING_BASE_PATH=http://ollama-server:11434
+      - EMBEDDING_MODEL_PREF=llava # nomic-embed-text:latest
+      - EMBEDDING_MODEL_MAX_CHUNK_LENGTH=8192
+      - VECTOR_DB=lancedb
+      - WHISPER_PROVIDER=local
+      - TTS_PROVIDER=native
+      - PASSWORDMINCHAR=8
+      # Add any other keys here for services or settings
+      # you can find in the docker/.env.example file
+    volumes:
+      - ${DATA_DIR:-./data}/anythingllm_storage:/app/server/storage
+    restart: always
+    depends_on:
+      - ollama-server

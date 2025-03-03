@@ -1,0 +1,18 @@
+{
+    "host": "0.0.0.0",
+    "port": 8000,
+    "models": [
+      {
+        "model": "/models/llava-v1.5-7b/llava-v1.5-7b-Q4_K.gguf",
+        "clip_model_path": "/models/llava-v1.5-7b/llava-v1.5-7b-mmproj-Q4_0.gguf",
+        "model_alias": "llava-v1.5-7b",
+        "chat_format": "llava-1-5",
+        "n_gpu_layers": -1,
+        "offload_kqv": true,
+        "n_threads": 12,
+        "n_batch": 512,
+        "n_ctx": 4096 ,
+        "verbose": true
+      }
+    ]
+  }

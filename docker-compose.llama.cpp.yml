@@ -1,0 +1,57 @@
+services:
+  llamacpp-server:
+    image: ${IMAGE:-ghcr.io/ggml-org/llama.cpp:full-cuda}
+    shm_size: '8gb'
+    entrypoint: ${ENTRYPOINT:-/app/llama-server} # default entrypoint: /app/tools.sh
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              device_ids: ["${GPU_ID:-0}"]
+              capabilities: [gpu]
+    ports:
+      - 8080:8080
+    volumes:
+      - ${MODELS:-./models}:/models
+    environment:
+      # alternatively, you can use "LLAMA_ARG_MODEL_URL" to download the model
+      LLAMA_ARG_MODEL: ${LLAMA_ARG_MODEL:-/models/Qwen2.5-VL-7B-Instruct/Qwen2.5-VL-7B-Instruct-Q4_0.gguf}
+      LLAMA_ARG_CTX_SIZE: 4096
+      LLAMA_ARG_N_PARALLEL: 2
+      LLAMA_ARG_ENDPOINT_METRICS: 1
+      LLAMA_ARG_PORT: 8080
+      LLAMA_ARG_HOST: 0.0.0.0
+
+
+  llamacpp-server-py:
+    image: ${REGISTRY:-llamacpp-server-python}/llamacpp-server-py:${LLAMA_CPP_VERSION:-0.3.7}
+    shm_size: '8gb'
+    entrypoint: ${ENTRYPOINT:-/app/entrypoint.sh}
+    ulimits:
+      memlock: -1
+    build:
+        network: host
+        context: .
+        dockerfile: Dockerfile.llamacpp-server-python
+        args:
+          BASE_IMAGE: ${BASE_IMAGE:-ghcr.io/ggml-org/llama.cpp:full-cuda}
+          LLAMA_CPP_VERSION: ${LLAMA_CPP_VERSION:-0.3.7}
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              device_ids: ["${GPU_ID:-0}"]
+              capabilities: [gpu]
+    ports:
+      - 18000:8000
+      - 18888:8888
+    volumes:
+      - ${MODELS:-./models}:/models
+      - ./entrypoint.sh:/app/entrypoint.sh
+      - ./workspace:/app/workspace
+      - .jupyter:/root/.jupyter
+    environment:
+      # alternatively, you can use "LLAMA_ARG_MODEL_URL" to download the model
+      LLM_CONFIG: ${LLM_CONFIG:-config.json}

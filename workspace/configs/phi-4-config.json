@@ -1,0 +1,16 @@
+{
+    "host": "0.0.0.0",
+    "port": 8000,
+    "models": [
+      {
+        "model": "/models/phi-4/phi-4-q4.gguf",
+        "model_alias": "phi-4",
+        "chat_format": "chatml",
+        "n_gpu_layers": -1,
+        "offload_kqv": true,
+        "n_threads": 12,
+        "n_batch": 512,
+        "n_ctx": 2048
+      }
+    ]
+  }
