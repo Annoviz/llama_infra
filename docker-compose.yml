@@ -50,9 +50,26 @@ services:
       - TTS_PROVIDER=native
       - PASSWORDMINCHAR=8
       # Add any other keys here for services or settings
-      # you can find in the docker/.env.example file
     volumes:
       - ${DATA_DIR:-./data}/anythingllm_storage:/app/server/storage
+    restart: always
+    depends_on:
+      - ollama-server
+
+
+  open-webui:
+    image: ghcr.io/open-webui/open-webui:${OW_VERSION:-v0.5.18}
+    container_name: open-webui
+    ports:
+    - "3002:8080"
+    cap_add:
+      - SYS_ADMIN
+    environment:
+    # Adjust for your environment
+      - OLLAMA_BASE_URL=http://ollama-server:11434
+      # Add any other keys here for services or settings
+    volumes:
+      - ${DATA_DIR:-./data}/open-webui:/app/backend/data
     restart: always
     depends_on:
       - ollama-server

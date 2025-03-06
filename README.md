@@ -20,8 +20,11 @@ docker compose up -d ollama-server
 # anythingllm - https://github.com/Mintplex-Labs/anything-llm
 docker compose up -d anythingllm
 
-# ollama-server + anythingllm
-docker compose up -d ollama-server anythingllm
+# ollama-server + anythingllm = localhost:3001
+docker compose up -d anythingllm
+
+# ollama-server + open-webui = localhost:3002
+docker compose up -d open-webui
 
 
 
@@ -45,3 +48,23 @@ docker compose -f docker-compose.llama.cpp.yml up -d llamacpp-server-py
 
 
 ```
+
+# Contact
+* Author: Dima Kanevsky
+* [LinkedIn](https://www.linkedin.com/in/dmitry-dima-kanevsky-2a4a0438/)
+* [github](https://github.com/dimakan)
+* [Email](mailto:dima@annoviz.com)
+
+# License
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+# Citation
+```bibtex
+@misc{kanevsky2025llama,
+  author = {Kanevsky, Dima},
+  title = {Llama.cpp, Ollama, AnythingLLM and more},
+  year = {2025},
+  publisher = {GitHub},
+  journal = {GitHub repository},
+  howpublished = {\url{https://github.com/Annoviz/llama_infra}}
+}
