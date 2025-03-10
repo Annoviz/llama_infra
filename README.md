@@ -16,7 +16,7 @@
 
 
 
-# Usage
+## Usage - server
 ```
 # ollama-server
 docker compose up -d ollama-server
@@ -30,7 +30,32 @@ docker compose up -d anythingllm
 # ollama-server + open-webui = localhost:3002
 docker compose up -d open-webui
 
+```
 
+
+## Usage - client
+```
+# install mini conda
+wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh
+chmod +x Miniconda3-latest-Linux-x86_64.sh
+./Miniconda3-latest-Linux-x86_64.sh
+
+# create a new conda environment
+conda create -n llama_infra python=3.10
+
+# activate the conda environment
+conda activate llama_infra
+
+# install the client requirements
+pip install -r requirements-client.txt
+
+# run the client examples with jupyter: workspace/ollama_examples.ipynb
+jupyter notebook
+
+```
+
+## Usage - extra
+```
 
 # Run the lamma.cpp server - WIP
 docker compose -f docker-compose.llama.cpp.yml up -d llamacpp-server
@@ -48,9 +73,6 @@ docker compose -f docker-compose.llama.cpp.yml build llamacpp-server-py
 
 # Run the python server
 docker compose -f docker-compose.llama.cpp.yml up -d llamacpp-server-py
-
-
-
 ```
 
 # Contact
