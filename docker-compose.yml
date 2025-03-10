@@ -1,6 +1,6 @@
 services:
   ollama-server:
-    image: ollama/ollama:${OLLAMA_VERSION:-0.5.13-rc5}
+    image: ollama/ollama:${OLLAMA_VERSION:-0.5.13}
     shm_size: '8gb'
     ulimits:
       memlock: -1

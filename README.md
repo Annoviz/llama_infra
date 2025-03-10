@@ -10,6 +10,10 @@
 * [Llama.cpp-Local-OpenAI-server Medium](https://medium.com/@odhitom09/running-openais-server-locally-with-llama-cpp-5f29e0d955b7)
 * [microsofts-phi-4](https://koshurai.medium.com/exploring-microsofts-phi-4-model-and-its-gguf-format-with-llama-cpp-aaccb816a5a8)
 
+## Docker hub
+* [ollama](https://hub.docker.com/r/ollama/ollama/tags)
+* [anythingllm](https://hub.docker.com/r/mintplexlabs/anythingllm/tags)
+
 
 
 # Usage
