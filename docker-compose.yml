@@ -16,6 +16,7 @@ services:
     volumes:
       - ${MODELS:-./models}:/models
       - ./workspace:/app/workspace
+    restart: always
     environment:
       OLLAMA_MODELS: /models
       OLLAMA_KV_CACHE_TYPE: q4_0 # can be: f16, q8_0, q4_0
