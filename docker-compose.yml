@@ -1,6 +1,6 @@
 services:
   ollama-server:
-    image: ollama/ollama:${OLLAMA_VERSION:-0.6.3}
+    image: ollama/ollama:${OLLAMA_VERSION:-0.9.0}
     shm_size: '8gb'
     ulimits:
       memlock: -1
@@ -27,7 +27,7 @@ services:
 
 
   anythingllm:
-    image: mintplexlabs/anythingllm:${ANYTHINGLLM_VERSION:-1.7.4}
+    image: mintplexlabs/anythingllm:${ANYTHINGLLM_VERSION:-1.8.1}
     container_name: anythingllm
     ports:
     - "3001:3001"
@@ -59,7 +59,7 @@ services:
 
 
   open-webui:
-    image: ghcr.io/open-webui/open-webui:${OW_VERSION:-v0.5.20}
+    image: ghcr.io/open-webui/open-webui:${OW_VERSION:-v0.6.13}
     container_name: open-webui
     ports:
     - "3002:8080"
