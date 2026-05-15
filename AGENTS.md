@@ -23,11 +23,14 @@ These stacks are intentionally separate; do not assume cross-stack compatibility
 5. Keep data safety expectations explicit (for example, never suggest deleting `./models`).
 6. After implementation, include a brief PR-style note with: what changed, validation run, and recommended next steps.
 7. Keep docs in sync: update `README.md` and/or `CHANGELOG.md` when behavior or workflow changes.
-8. End each agent session with 1-3 actionable improvements to the agent workflow.
+8. When routing rules or subagent docs change, run `make verify-agent-routing` before handoff.
+9. End each agent session with 1-3 actionable improvements to the agent workflow.
 
 ## Subagent Discovery Convention (Simple Markdown)
 
 - Location: `.github/agents/*.md`
+- Support docs live alongside execution subagents: `.github/agents/README.md` and `.github/agents/routing-smoke.md`.
+- All Markdown files in `.github/agents/` are validated by `tools/check_agent_docs.py`.
 - Each subagent file should include these headings:
   - `# <Agent Name>`
   - `## Purpose`
