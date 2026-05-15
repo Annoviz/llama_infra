@@ -1,5 +1,5 @@
 aiohappyeyeballs==2.4.6
-aiohttp==3.11.13
+aiohttp==3.13.4
 aiosignal==1.3.2
 altair==5.5.0
 annotated-types==0.7.0
@@ -43,7 +43,7 @@ docstring_parser==0.16
 exceptiongroup @ file:///home/conda/feedstock_root/build_artifacts/exceptiongroup_1733208806608/work
 executing @ file:///home/conda/feedstock_root/build_artifacts/executing_1733569351617/work
 expecttest==0.3.0
-fastapi==0.115.8
+fastapi==0.136.1
 fastjsonschema==2.21.1
 filelock @ file:///home/conda/feedstock_root/build_artifacts/filelock_1737517818712/work
 fqdn==1.5.1
@@ -80,7 +80,7 @@ jupyter-events==0.12.0
 jupyter-lsp==2.2.5
 jupyter_client==8.6.3
 jupyter_core==5.7.2
-jupyter_server==2.15.0
+jupyter_server==2.18.0
 jupyter_server_terminals==0.5.3
 jupyterlab==4.3.5
 jupyterlab_pygments==0.3.0
@@ -107,7 +107,7 @@ nbformat==5.10.4
 nest-asyncio==1.6.0
 networkx==3.4.2
 ninja==1.11.1.3
-notebook==7.3.2
+notebook==7.5.6
 notebook_shim==0.2.4
 numpy @ file:///home/conda/feedstock_root/build_artifacts/numpy_1737331065203/work/dist/numpy-2.2.2-cp311-cp311-linux_x86_64.whl#sha256=6384aec253ac1c4a8e4c91c88343657bb0a58927963bd1b7fad53f09d3fa122a
 nvidia-cublas-cu12==12.4.5.8
@@ -148,7 +148,7 @@ pyarrow==19.0.1
 pycosat @ file:///home/conda/feedstock_root/build_artifacts/pycosat_1732588400443/work
 pycparser @ file:///home/conda/feedstock_root/build_artifacts/bld/rattler-build_pycparser_1733195786/work
 pydantic==2.10.6
-pydantic-settings==2.8.1
+pydantic-settings==2.14.1
 pydantic_core==2.27.2
 pydeck==0.9.1
 Pygments @ file:///home/conda/feedstock_root/build_artifacts/pygments_1736243443484/work
@@ -175,9 +175,9 @@ smmap==5.0.2
 sniffio==1.3.1
 sortedcontainers==2.4.0
 soupsieve @ file:///home/conda/feedstock_root/build_artifacts/soupsieve_1693929250441/work
-sse-starlette==2.2.1
+sse-starlette==3.4.4
 stack_data @ file:///home/conda/feedstock_root/build_artifacts/stack_data_1733569443808/work
-starlette==0.45.3
+starlette==0.49.1
 starlette-context==0.3.6
 streamlit==1.42.2
 sympy==1.13.1
@@ -201,7 +201,7 @@ typing_extensions @ file:///home/conda/feedstock_root/build_artifacts/typing_ext
 tzdata==2025.1
 uri-template==1.3.0
 urllib3 @ file:///home/conda/feedstock_root/build_artifacts/urllib3_1734859416348/work
-uvicorn==0.34.0
+uvicorn==0.47.0
 watchdog==6.0.0
 wcwidth @ file:///home/conda/feedstock_root/build_artifacts/wcwidth_1733231326287/work
 webcolors==24.11.1

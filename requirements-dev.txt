@@ -1,5 +1,8 @@
 openai
-jupyter
+jupyter>=1.1.1
+jupyter-server>=2.18.0
+notebook>=7.5.6
+aiohttp>=3.13.4
 pydantic
 instructor
 streamlit
@@ -13,3 +16,11 @@ pydantic-settings>=2.14.1
 sse-starlette>=3.4.4
 starlette-context>=0.3.6,<0.4
 PyYAML>=6.0.3
+
+# test dependencies
+pytest>=7.0.0
+pytest-asyncio>=0.20.0
+pytest-cov>=3.0.0
+pytest-mock>=3.0.0
+pytest-xdist>=3.0.0
+hypothesis>=6.0.0
