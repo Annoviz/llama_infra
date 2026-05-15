@@ -10,6 +10,7 @@ LLAMA_CPP_IMAGE ?= ghcr.io/ggml-org/llama.cpp:full-cuda-b5350
 	pull-main pull-llama pull-all \
 	build-llamacpp-py \
 	updates-check updates-suggest updates-apply \
+	precommit-install precommit-run precommit-update \
 	up-ollama up-anythingllm up-open-webui up-main \
 	up-llamacpp up-llamacpp-py up-llama \
 	down-main down-llama down-all \
@@ -41,6 +42,10 @@ help:
 	@printf "  make updates-check       # Check latest Docker tags and Python package versions\n"
 	@printf "  make updates-suggest     # Check and write .update-manager-proposal.json\n"
 	@printf "  make updates-apply       # Show diff and apply after interactive prompt\n"
+	@printf "\nCode quality:\n"
+	@printf "  make precommit-install   # Install pre-commit git hooks\n"
+	@printf "  make precommit-run       # Run all pre-commit hooks on all files\n"
+	@printf "  make precommit-update    # Update pinned hook revisions in .pre-commit-config.yaml\n"
 	@printf "\nOverride examples:\n"
 	@printf "  OLLAMA_VERSION=0.18.2 make config-main\n"
 	@printf "  IMAGE=ghcr.io/ggml-org/llama.cpp:full-cuda-b5343 make config-llama\n"
@@ -73,6 +78,15 @@ updates-suggest:
 
 updates-apply:
 	python3 tools/update_manager.py apply
+
+precommit-install:
+	pre-commit install
+
+precommit-run:
+	pre-commit run --all-files
+
+precommit-update:
+	pre-commit autoupdate
 
 up-ollama:
 	$(COMPOSE_MAIN) up -d ollama-server
@@ -149,4 +163,3 @@ gpu-smoke-llamacpp:
 
 clean:
 	@find . -maxdepth 1 -type f \( -name 'compose_*.txt' -o -name '*_checks.json' -o -name 'verification_report.json' \) -print -delete
-

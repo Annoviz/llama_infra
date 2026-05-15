@@ -90,6 +90,21 @@ make updates-apply
 - Editable dependency source: `requirements-dev.txt`
 - Frozen snapshot (never edited by update manager): `workspace/requirements.txt`
 
+## Code quality (pre-commit)
+```bash
+# install dev tooling
+pip install -r requirements-dev.txt
+
+# install git pre-commit hook
+make precommit-install
+
+# run all hooks manually
+make precommit-run
+
+# refresh pinned hook revisions
+make precommit-update
+```
+
 # Contact
 * Author: Dima Kanevsky
 * [LinkedIn](https://www.linkedin.com/in/dmitry-dima-kanevsky-2a4a0438/)

@@ -40,4 +40,3 @@ If you need non-interactive behavior for automation:
 ```bash
 python3 tools/update_manager.py apply --yes
 ```
-

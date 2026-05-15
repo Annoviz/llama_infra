@@ -20,7 +20,7 @@ import re
 import sys
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Callable, Dict, Iterable, List, Optional, Sequence, Tuple
+from typing import Dict, Iterable, List, Optional, Sequence, Tuple
 from urllib import error, parse, request
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -117,7 +117,9 @@ def latest_pypi_version(package_name: str) -> Optional[str]:
     return str(version) if version else None
 
 
-def parse_requirements_line(line: str) -> Tuple[Optional[str], Optional[str], Optional[str]]:
+def parse_requirements_line(
+    line: str,
+) -> Tuple[Optional[str], Optional[str], Optional[str]]:
     line = line.strip()
     if not line or line.startswith("#"):
         return None, None, None
@@ -151,7 +153,9 @@ def discover_docker_updates() -> List[UpdateItem]:
     current_ollama = re.search(r"\$\{OLLAMA_VERSION:-([^}]+)\}", main_text)
     current_anything = re.search(r"\$\{ANYTHINGLLM_VERSION:-([^}]+)\}", main_text)
     current_openwebui = re.search(r"\$\{OW_VERSION:-([^}]+)\}", main_text)
-    current_llama_image = re.search(r"\$\{IMAGE:-ghcr\.io/ggml-org/llama\.cpp:([^}]+)\}", llama_text)
+    current_llama_image = re.search(
+        r"\$\{IMAGE:-ghcr\.io/ggml-org/llama\.cpp:([^}]+)\}", llama_text
+    )
     current_llama_cpp_ver = re.search(r"\$\{LLAMA_CPP_VERSION:-([^}]+)\}", llama_text)
 
     if current_ollama:
@@ -174,7 +178,9 @@ def discover_docker_updates() -> List[UpdateItem]:
 
     if current_anything:
         try:
-            latest = latest_tag(docker_hub_tags("mintplexlabs/anythingllm"), r"^\d+(\.\d+){1,3}$")
+            latest = latest_tag(
+                docker_hub_tags("mintplexlabs/anythingllm"), r"^\d+(\.\d+){1,3}$"
+            )
         except (error.HTTPError, error.URLError):
             latest = None
         if latest:
@@ -192,7 +198,9 @@ def discover_docker_updates() -> List[UpdateItem]:
 
     if current_openwebui:
         try:
-            latest = latest_tag(ghcr_tags("open-webui/open-webui"), r"^v?\d+(\.\d+){1,3}$")
+            latest = latest_tag(
+                ghcr_tags("open-webui/open-webui"), r"^v?\d+(\.\d+){1,3}$"
+            )
         except (error.HTTPError, error.URLError):
             latest = None
         if latest:
@@ -343,8 +351,12 @@ def build_replacements(items: Sequence[UpdateItem]) -> List[Replacement]:
             replacements.append(
                 Replacement(
                     source_file=DOCKER_COMPOSE_LLAMA,
-                    old=r"${BASE_IMAGE:-ghcr.io/ggml-org/llama.cpp:" + item.current + "}",
-                    new=r"${BASE_IMAGE:-ghcr.io/ggml-org/llama.cpp:" + item.latest + "}",
+                    old=r"${BASE_IMAGE:-ghcr.io/ggml-org/llama.cpp:"
+                    + item.current
+                    + "}",
+                    new=r"${BASE_IMAGE:-ghcr.io/ggml-org/llama.cpp:"
+                    + item.latest
+                    + "}",
                 )
             )
             replacements.append(
@@ -384,7 +396,9 @@ def build_replacements(items: Sequence[UpdateItem]) -> List[Replacement]:
     return replacements
 
 
-def apply_replacements(preview_only: bool, replacements: Sequence[Replacement]) -> Dict[Path, str]:
+def apply_replacements(
+    preview_only: bool, replacements: Sequence[Replacement]
+) -> Dict[Path, str]:
     by_file: Dict[Path, List[Replacement]] = {}
     for rep in replacements:
         by_file.setdefault(rep.source_file, []).append(rep)
@@ -506,7 +520,9 @@ def run_apply(args: argparse.Namespace) -> int:
 
 
 def build_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(description="Update manager for docker tags and packages")
+    parser = argparse.ArgumentParser(
+        description="Update manager for docker tags and packages"
+    )
     sub = parser.add_subparsers(dest="command", required=True)
 
     p_check = sub.add_parser("check", help="List current and latest versions")
@@ -541,4 +557,3 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
-

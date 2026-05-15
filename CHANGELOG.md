@@ -96,5 +96,3 @@ Update run (May 15, 2026):
   - `sse-starlette>=1.6.1` -> `sse-starlette>=3.4.4`
   - `PyYAML>=5.1` -> `PyYAML>=6.0.3`
 - No changes were applied in this run to Open WebUI pin (`v0.8.11`) or the llama.cpp CUDA base image tag (`full-cuda-b5350`).
-
-

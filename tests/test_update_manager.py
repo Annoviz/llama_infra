@@ -31,7 +31,9 @@ class UpdateManagerTests(unittest.TestCase):
             update_manager.parse_requirements_line("starlette-context>=0.3.6,<0.4"),
             ("starlette-context", "complex", ">=0.3.6,<0.4"),
         )
-        self.assertEqual(update_manager.parse_requirements_line("# comment"), (None, None, None))
+        self.assertEqual(
+            update_manager.parse_requirements_line("# comment"), (None, None, None)
+        )
 
     def test_is_newer_numeric(self):
         self.assertTrue(update_manager.is_newer("0.19.0", "0.18.3"))
@@ -54,11 +56,12 @@ class UpdateManagerTests(unittest.TestCase):
                     )
                 ]
                 with self.assertRaises(RuntimeError):
-                    update_manager.apply_replacements(preview_only=False, replacements=reps)
+                    update_manager.apply_replacements(
+                        preview_only=False, replacements=reps
+                    )
             finally:
                 update_manager.REQ_FROZEN = original_frozen
 
 
 if __name__ == "__main__":
     unittest.main()
-

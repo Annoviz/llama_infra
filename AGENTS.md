@@ -240,5 +240,3 @@ docker run --rm --gpus all nvidia/cuda:12.4.1-runtime nvidia-smi
 - Edit `requirements-dev.txt`
 - Rebuild: `make build-llamacpp-py`
 - Restart: `make restart-llamacpp-py`
-
-
