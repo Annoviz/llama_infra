@@ -27,7 +27,7 @@ services:
   llamacpp-server-py:
     image: ${REGISTRY:-llamacpp-server-python}/llamacpp-server-py:${LLAMA_CPP_VERSION:-0.3.23}
     shm_size: '8gb'
-    entrypoint: ${ENTRYPOINT:-/app/entrypoint.llamacpp.sh}
+    entrypoint: ${ENTRYPOINT:-/app/scripts/entrypoint.llamacpp.sh}
     ulimits:
       memlock: -1
     build:
@@ -50,7 +50,7 @@ services:
       - 18888:8888
     volumes:
       - ${MODELS:-./models}:/models
-      - ./entrypoint.llamacpp.sh:/app/entrypoint.llamacpp.sh
+      - ./scripts/entrypoint.llamacpp.sh:/app/scripts/entrypoint.llamacpp.sh
       - ./workspace:/app/workspace
       - .jupyter:/root/.jupyter
     environment:

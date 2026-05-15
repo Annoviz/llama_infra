@@ -181,3 +181,15 @@ Update run (May 15, 2026):
 - Moved llama.cpp `LLM_CONFIG` JSON files from `workspace/configs/` to `workspace/models/`.
 - Added `workspace/models/models-config.yaml` with strict per-model `source_type` validation (`ollama` or `gguf`) and mixed-source rejection.
 
+### Local Claude Playbook Refresh (May 15, 2026)
+
+- Rewrote `CLAUDE_CODE_LOCAL.md` to align with repo workflows and naming:
+  - Makefile-first lifecycle commands for Ollama,
+  - `ollama-server` service naming,
+  - environment layering guidance (`.env` -> compose -> container env).
+- Replaced malformed Modelfile and benchmark snippets with runnable examples.
+- Added safer benchmark guidance (timeouts, bounded prompts, error handling).
+- Added a discoverability section in `README.md` that links to `CLAUDE_CODE_LOCAL.md`.
+- Follow-up: clarified that Ollama `Modelfile` uses Dockerfile-like syntax and should be stored in `workspace/models`.
+- Committed artifacts: `scripts/entrypoint.ollama.sh`, `scripts/entrypoint.llamacpp.sh`, `scripts/build_models.sh`, `scripts/aliases.sh` — all shell scripts consolidated under `scripts/`.
+

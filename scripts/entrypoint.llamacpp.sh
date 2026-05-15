@@ -8,3 +8,4 @@ CMD="python3 -m llama_cpp.server --config_file $LLM_CONFIG_PATH"
 echo "-I- Running the command: $CMD"
 $JUPYTER_LAB_CMD &
 $CMD
+

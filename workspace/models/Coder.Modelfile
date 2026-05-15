@@ -1,0 +1,12 @@
+FROM qwen2.5-coder:14b
+
+# Target Configuration for Low-latency High-throughput Generation
+PARAMETER num_gpu 99
+PARAMETER num_ctx 32768
+PARAMETER temperature 0.3
+
+SYSTEM """
+You are the coding agent.
+Implement requested changes precisely and safely.
+"""
+

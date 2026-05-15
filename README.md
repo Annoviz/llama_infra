@@ -78,12 +78,18 @@ make build-llamacpp-py
 make up-llamacpp-py
 ```
 
+## Local Claude Code playbook
+
+- Repo-aligned setup guide: `CLAUDE_CODE_LOCAL.md`
+- Uses Makefile-first commands for Ollama lifecycle (`make up-ollama`, `make logs-ollama`, `make ps-main`)
+- Covers model alias creation (`planner`, `coder`), shell routing aliases, and local benchmarking
+
 ## Model config locations
 
 - Llama.cpp JSON server configs: `workspace/models/*.json`
 - Model sync contract: `workspace/models/models-config.yaml`
-- `LLM_CONFIG` is resolved as `/app/workspace/models/${LLM_CONFIG}` in `entrypoint.llamacpp.sh`
-- Ollama startup and sync entrypoint: `entrypoint.ollama.sh`
+- `LLM_CONFIG` is resolved as `/app/workspace/models/${LLM_CONFIG}` in `scripts/entrypoint.llamacpp.sh`
+- Ollama startup and sync entrypoint: `scripts/entrypoint.ollama.sh`
 
 ## Update manager (Docker tags + Python packages)
 ```bash
