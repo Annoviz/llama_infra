@@ -1,6 +1,6 @@
 services:
   ollama-server:
-    image: ollama/ollama:${OLLAMA_VERSION:-0.18.3}
+    image: ollama/ollama:${OLLAMA_VERSION:-0.24.0}
     shm_size: '8gb'
     ulimits:
       memlock: -1
@@ -27,7 +27,7 @@ services:
 
 
   anythingllm:
-    image: mintplexlabs/anythingllm:${ANYTHINGLLM_VERSION:-1.11.2}
+    image: mintplexlabs/anythingllm:${ANYTHINGLLM_VERSION:-1.12.1}
     container_name: anythingllm
     ports:
     - "3001:3001"

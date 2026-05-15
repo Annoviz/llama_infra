@@ -19,7 +19,7 @@ COPY $REQUIREMENTS_FILE /tmp/requirements.txt
 RUN python3 -m pip install -r /tmp/requirements.txt
 
 RUN apt-get update && apt-get install -y cmake git --no-install-recommends
-ARG LLAMA_CPP_VERSION=0.3.19
+ARG LLAMA_CPP_VERSION=0.3.23
 ARG CMAKE_CUDA_ARCHITECTURES=70;75;80;86
 RUN CMAKE_ARGS="-DGGML_CUDA=on -DCMAKE_CUDA_ARCHITECTURES=$CMAKE_CUDA_ARCHITECTURES" python3 -m pip install "llama-cpp-python[server]=$LLAMA_CPP_VERSION"
 

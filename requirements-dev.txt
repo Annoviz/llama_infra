@@ -6,10 +6,10 @@ streamlit
 colorama
 
 # for llama-cpp-python[server]
-diskcache>=5.6.1 
-uvicorn>=0.22.0
-fastapi>=0.100.0
-pydantic-settings>=2.0.1
-sse-starlette>=1.6.1
+diskcache>=5.6.3 
+uvicorn>=0.47.0
+fastapi>=0.136.1
+pydantic-settings>=2.14.1
+sse-starlette>=3.4.4
 starlette-context>=0.3.6,<0.4
-PyYAML>=5.1
+PyYAML>=6.0.3

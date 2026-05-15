@@ -83,8 +83,18 @@ The finished repo state is validated with:
 ---
 Generated: March 26, 2026
 
-Update note (May 15, 2026):
-- `requirements-llama_cpp_python-0.3.19.txt` was retired as a duplicate.
-- `requirements-dev.txt` is the canonical editable dependency input for python server builds.
+Update run (May 15, 2026):
+- Applied version bumps from the update workflow in the tracked defaults.
+- `ollama/ollama:${OLLAMA_VERSION:-0.18.3}` -> `ollama/ollama:${OLLAMA_VERSION:-0.24.0}` in `docker-compose.yml`.
+- `mintplexlabs/anythingllm:${ANYTHINGLLM_VERSION:-1.11.2}` -> `mintplexlabs/anythingllm:${ANYTHINGLLM_VERSION:-1.12.1}` in `docker-compose.yml`.
+- `LLAMA_CPP_VERSION` default `0.3.19` -> `0.3.23` in `docker-compose.llama.cpp.yml` and `Dockerfile.llamacpp-server-python`.
+- Updated llama-cpp server support package minimums in `requirements-dev.txt`:
+  - `diskcache>=5.6.1` -> `diskcache>=5.6.3`
+  - `uvicorn>=0.22.0` -> `uvicorn>=0.47.0`
+  - `fastapi>=0.100.0` -> `fastapi>=0.136.1`
+  - `pydantic-settings>=2.0.1` -> `pydantic-settings>=2.14.1`
+  - `sse-starlette>=1.6.1` -> `sse-starlette>=3.4.4`
+  - `PyYAML>=5.1` -> `PyYAML>=6.0.3`
+- No changes were applied in this run to Open WebUI pin (`v0.8.11`) or the llama.cpp CUDA base image tag (`full-cuda-b5350`).
 
 
