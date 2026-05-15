@@ -75,6 +75,21 @@ docker compose -f docker-compose.llama.cpp.yml build llamacpp-server-py
 docker compose -f docker-compose.llama.cpp.yml up -d llamacpp-server-py
 ```
 
+## Update manager (Docker tags + Python packages)
+```bash
+# Check current vs latest (no file writes)
+make updates-check
+
+# Check and save proposal file (.update-manager-proposal.json)
+make updates-suggest
+
+# Show patch and apply only after interactive y/yes confirmation
+make updates-apply
+```
+
+- Editable dependency source: `requirements-dev.txt`
+- Frozen snapshot (never edited by update manager): `workspace/requirements.txt`
+
 # Contact
 * Author: Dima Kanevsky
 * [LinkedIn](https://www.linkedin.com/in/dmitry-dima-kanevsky-2a4a0438/)

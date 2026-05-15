@@ -78,8 +78,13 @@ The finished repo state is validated with:
 - `ghcr.io/open-webui/open-webui:v0.8.11`
 - `ghcr.io/ggml-org/llama.cpp:full-cuda-b5350`
 - `llama-cpp-python==0.3.19`
-- `requirements-llama_cpp_python-0.3.19.txt`
+- `requirements-dev.txt` (current active build input)
 
 ---
 Generated: March 26, 2026
+
+Update note (May 15, 2026):
+- `requirements-llama_cpp_python-0.3.19.txt` was retired as a duplicate.
+- `requirements-dev.txt` is the canonical editable dependency input for python server builds.
+
 

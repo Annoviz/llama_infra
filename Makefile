@@ -9,6 +9,7 @@ LLAMA_CPP_IMAGE ?= ghcr.io/ggml-org/llama.cpp:full-cuda-b5350
 	config-main config-llama config-all \
 	pull-main pull-llama pull-all \
 	build-llamacpp-py \
+	updates-check updates-suggest updates-apply \
 	up-ollama up-anythingllm up-open-webui up-main \
 	up-llamacpp up-llamacpp-py up-llama \
 	down-main down-llama down-all \
@@ -36,10 +37,14 @@ help:
 	@printf "  make ps-all              # Show running containers in both stacks\n"
 	@printf "  make gpu-host            # Show host NVIDIA status\n"
 	@printf "  make gpu-smoke-llamacpp  # Run a CUDA image smoke test with nvidia-smi\n"
+	@printf "\nUpdate manager:\n"
+	@printf "  make updates-check       # Check latest Docker tags and Python package versions\n"
+	@printf "  make updates-suggest     # Check and write .update-manager-proposal.json\n"
+	@printf "  make updates-apply       # Show diff and apply after interactive prompt\n"
 	@printf "\nOverride examples:\n"
 	@printf "  OLLAMA_VERSION=0.18.2 make config-main\n"
 	@printf "  IMAGE=ghcr.io/ggml-org/llama.cpp:full-cuda-b5343 make config-llama\n"
-	@printf "  LLAMA_CPP_VERSION=0.3.18 REQUIREMENTS_FILE=requirements-llama_cpp_python-0.3.19.txt make build-llamacpp-py\n\n"
+	@printf "  LLAMA_CPP_VERSION=0.3.18 REQUIREMENTS_FILE=requirements-dev.txt make build-llamacpp-py\n\n"
 
 config-main:
 	$(COMPOSE_MAIN) config
@@ -59,6 +64,15 @@ pull-all: pull-main pull-llama
 
 build-llamacpp-py:
 	$(COMPOSE_LLAMA) build llamacpp-server-py
+
+updates-check:
+	python3 tools/update_manager.py check
+
+updates-suggest:
+	python3 tools/update_manager.py suggest
+
+updates-apply:
+	python3 tools/update_manager.py apply
 
 up-ollama:
 	$(COMPOSE_MAIN) up -d ollama-server

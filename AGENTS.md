@@ -37,6 +37,11 @@ make down-llama       # Stop llama.cpp stack
 make config-all       # Validate both compose files
 make pull-all         # Pre-pull all images
 make gpu-host         # Check NVIDIA GPU availability
+
+# Version maintenance
+make updates-check    # Check Docker tags + requirements-dev.txt package updates
+make updates-suggest  # Write .update-manager-proposal.json with suggestions
+make updates-apply    # Interactive yes/no prompt before writing changes
 ```
 
 **Makefile pattern**: All targets expand to `docker compose -f <file> <command>`. Inspect the Makefile (lines 4-5) to understand composition file selection.
@@ -73,19 +78,23 @@ make gpu-host         # Check NVIDIA GPU availability
 
 ## Environment & Dependency Management
 
-**Three requirements files with distinct purposes:**
+**Requirements files and roles:**
 
 | File | Purpose | When Used |
 |------|---------|-----------|
 | `requirements-client.txt` | Minimal: openai, ollama, jupyter | Local development, client scripts |
-| `requirements-dev.txt` | Build dependencies for Python server | Docker build in Dockerfile |
-| `requirements-llama_cpp_python-0.3.19.txt` | Locked workspace environment | Heavy data science workloads |
-| `workspace/requirements.txt` | Full conda-lock environment | Jupyter notebooks, full workspace |
+| `requirements-dev.txt` | Main editable dependency set for Python server | Docker build and day-to-day updates |
+| `workspace/requirements.txt` | Frozen environment snapshot | Jupyter notebooks / reproducible final state |
 
 **Version pinning strategy**: Base images have pinned tags (`ollama/ollama:0.18.3`, `ghcr.io/ggml-org/llama.cpp:full-cuda-b5350`). Use `Makefile` overrides to test new versions:
 ```bash
 OLLAMA_VERSION=0.19.0 make config-main  # View changes without deploying
 ```
+
+**Update manager behavior** (`tools/update_manager.py`):
+- Updates only managed defaults in compose/dockerfile + `requirements-dev.txt`
+- Treats `workspace/requirements.txt` as frozen snapshot (report-only / never edited)
+- `make updates-apply` always asks for interactive confirmation (`y`/`yes`) unless explicitly bypassed
 
 ## GPU Configuration & NVIDIA Docker
 
@@ -151,7 +160,7 @@ response = client.chat.completions.create(
 **Building custom Python server** (uses build args for flexibility):
 ```bash
 LLAMA_CPP_VERSION=0.3.19 \
-REQUIREMENTS_FILE=requirements-llama_cpp_python-0.3.19.txt \
+REQUIREMENTS_FILE=requirements-dev.txt \
 make build-llamacpp-py
 ```
 
@@ -228,7 +237,7 @@ docker run --rm --gpus all nvidia/cuda:12.4.1-runtime nvidia-smi
 4. Deploy: `LLM_CONFIG=<model-name>-config.json docker compose -f docker-compose.llama.cpp.yml up -d llamacpp-server-py`
 
 **Extend Python server dependencies:**
-- Edit `requirements-llama_cpp_python-0.3.19.txt`
+- Edit `requirements-dev.txt`
 - Rebuild: `make build-llamacpp-py`
 - Restart: `make restart-llamacpp-py`
 

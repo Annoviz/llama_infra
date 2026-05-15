@@ -37,7 +37,7 @@ services:
         args:
           BASE_IMAGE: ${BASE_IMAGE:-ghcr.io/ggml-org/llama.cpp:full-cuda-b5350}
           LLAMA_CPP_VERSION: ${LLAMA_CPP_VERSION:-0.3.19}
-          REQUIREMENTS_FILE: ${REQUIREMENTS_FILE:-requirements-llama_cpp_python-0.3.19.txt}
+          REQUIREMENTS_FILE: ${REQUIREMENTS_FILE:-requirements-dev.txt}
     deploy:
       resources:
         reservations:
