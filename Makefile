@@ -8,7 +8,7 @@ LLAMA_CPP_IMAGE ?= ghcr.io/ggml-org/llama.cpp:full-cuda-b5350
 .PHONY: help \
 	config-main config-llama config-all \
 	pull-main pull-llama pull-all \
-	build-llamacpp-py \
+	build-llamacpp-py models-sync \
 	updates-check updates-suggest updates-apply \
 	check-agent-docs verify-agent-routing \
 	precommit-install precommit-run precommit-update \
@@ -36,6 +36,7 @@ help:
 	@printf "\nDiagnostics:\n"
 	@printf "  make config-all          # Render both compose files\n"
 	@printf "  make pull-all            # Pull all pinned images\n"
+	@printf "  make models-sync         # Sync models from workspace/models/models-config.yaml inside ollama-server\n"
 	@printf "  make ps-all              # Show running containers in both stacks\n"
 	@printf "  make gpu-host            # Show host NVIDIA status\n"
 	@printf "  make gpu-smoke-llamacpp  # Run a CUDA image smoke test with nvidia-smi\n"
@@ -72,6 +73,9 @@ pull-all: pull-main pull-llama
 
 build-llamacpp-py:
 	$(COMPOSE_LLAMA) build llamacpp-server-py
+
+models-sync:
+	$(COMPOSE_MAIN) run --rm --no-deps ollama-server --sync-only
 
 updates-check:
 	python3 tools/update_manager.py check

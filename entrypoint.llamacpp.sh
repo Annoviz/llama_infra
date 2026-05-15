@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 export LLM_CONFIG=${LLM_CONFIG:-config.json}
-export LLM_CONFIG_PATH=/app/workspace/configs/${LLM_CONFIG}
+export LLM_CONFIG_PATH=/app/workspace/models/${LLM_CONFIG}
 # Set the JUPYTER_LAB_CMD environment variable
 JUPYTER_LAB_CMD=${JUPYTER_LAB_CMD:-jupyter-lab --no-browser --allow-root}
 # Run the command with the given arguments

@@ -173,3 +173,11 @@ Update run (May 15, 2026):
 - Added an explicit clarification-question smoke case in `.github/agents/routing-smoke.md`.
 - Added a monthly keyword drift review note in `.github/agents/README.md`.
 
+### Model Sync and Entrypoint Split (May 15, 2026)
+
+- Renamed llama.cpp Python entrypoint to `entrypoint.llamacpp.sh` and kept `llama_cpp.server` startup behavior.
+- Added `entrypoint.ollama.sh` and wired `ollama-server` to run model sync before `ollama serve`.
+- Added `make models-sync` to execute sync inside an `ollama-server` container (`--sync-only`).
+- Moved llama.cpp `LLM_CONFIG` JSON files from `workspace/configs/` to `workspace/models/`.
+- Added `workspace/models/models-config.yaml` with strict per-model `source_type` validation (`ollama` or `gguf`) and mixed-source rejection.
+

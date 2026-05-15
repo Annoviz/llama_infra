@@ -2,6 +2,7 @@ services:
   ollama-server:
     image: ollama/ollama:${OLLAMA_VERSION:-0.24.0}
     shm_size: '8gb'
+    entrypoint: ["/bin/sh", "/app/entrypoint.ollama.sh"]
     ulimits:
       memlock: -1
     deploy:
@@ -16,6 +17,7 @@ services:
     volumes:
       - ${MODELS:-./models}:/models
       - ./workspace:/app/workspace
+      - ./entrypoint.ollama.sh:/app/entrypoint.ollama.sh:ro
     restart: always
     environment:
       OLLAMA_MODELS: /models

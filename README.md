@@ -19,16 +19,16 @@
 ## Usage - server
 ```
 # ollama-server
-docker compose up -d ollama-server
+make up-ollama
 
 # anythingllm - https://github.com/Mintplex-Labs/anything-llm
-docker compose up -d anythingllm
+make up-anythingllm
 
 # ollama-server + anythingllm = localhost:3001
-docker compose up -d anythingllm
+make up-anythingllm
 
 # ollama-server + open-webui = localhost:3002
-docker compose up -d open-webui
+make up-open-webui
 
 ```
 
@@ -58,7 +58,10 @@ jupyter notebook
 ```
 
 # Run the lamma.cpp server - WIP
-docker compose -f docker-compose.llama.cpp.yml up -d llamacpp-server
+make up-llamacpp
+
+# Sync models inside the ollama-server container
+make models-sync
 
 # Download the models - Qwen2.5-VL-7B-Instruct (Not supported by the server yet)
 mkdir -p models/Qwen2.5-VL-7B-Instruct
@@ -69,11 +72,18 @@ wget https://huggingface.co/IAILabs/Qwen2.5-VL-7B-Instruct-GGUF/resolve/main/mmp
 cd ../..
 
 # Build the python server
-docker compose -f docker-compose.llama.cpp.yml build llamacpp-server-py
+make build-llamacpp-py
 
 # Run the python server
-docker compose -f docker-compose.llama.cpp.yml up -d llamacpp-server-py
+make up-llamacpp-py
 ```
+
+## Model config locations
+
+- Llama.cpp JSON server configs: `workspace/models/*.json`
+- Model sync contract: `workspace/models/models-config.yaml`
+- `LLM_CONFIG` is resolved as `/app/workspace/models/${LLM_CONFIG}` in `entrypoint.llamacpp.sh`
+- Ollama startup and sync entrypoint: `entrypoint.ollama.sh`
 
 ## Update manager (Docker tags + Python packages)
 ```bash
@@ -115,7 +125,7 @@ This repo supports simple Markdown-based subagent discovery via `.github/agents/
 Available subagents:
 
 - `docker-ops-agent` -> stack lifecycle, logs, GPU checks
-- `model-config-agent` -> `workspace/configs/*.json`, `LLM_CONFIG`, GGUF/mmproj wiring
+- `model-config-agent` -> `workspace/models/*.json`, `LLM_CONFIG`, GGUF/mmproj wiring
 - `update-manager-agent` -> `tools/update_manager.py`, managed version/dependency updates
 - `docs-sync-agent` -> `README.md` and `CHANGELOG.md` synchronization
 - `coding-agent` -> implementation, refactors, bug fixes, and test updates

@@ -63,7 +63,7 @@ Keyword scoring table (strict mode, 0-5 scale):
 | Subagent | Keyword examples | Score per match |
 |---|---|---|
 | `.github/agents/docker-ops-agent.md` | `make up-main`, `make logs-ollama`, `ps-main`, `gpu`, `nvidia-smi`, `compose` | 5 |
-| `.github/agents/model-config-agent.md` | `LLM_CONFIG`, `workspace/configs`, `GGUF`, `mmproj`, `model_alias`, `chat_format` | 5 |
+| `.github/agents/model-config-agent.md` | `LLM_CONFIG`, `workspace/models`, `GGUF`, `mmproj`, `model_alias`, `chat_format` | 5 |
 | `.github/agents/update-manager-agent.md` | `updates-check`, `updates-suggest`, `updates-apply`, `requirements-dev`, `LLAMA_CPP_VERSION`, `tools/update_manager.py` | 5 |
 | `.github/agents/docs-sync-agent.md` | `README`, `CHANGELOG`, `docs`, `document`, `sync` | 4 |
 | `.github/agents/coding-agent.md` | `implement`, `feature`, `refactor`, `fix bug`, `implementation`, `patch` | 3 |

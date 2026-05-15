@@ -6,7 +6,7 @@ Handle model configuration and llama.cpp Python server wiring for JSON config-dr
 
 ## Owns
 
-- `workspace/configs/*.json`
+- `workspace/models/*.json`
 - `LLM_CONFIG` usage patterns
 - Model path conventions under `/models/...`
 - `model_alias`, `chat_format`, multimodal `clip_model_path`

@@ -34,6 +34,6 @@ RUN rm -rf /root/.cache/pip
 WORKDIR /app
 
 # Set the entrypoint
-COPY entrypoint.sh /app/entrypoint.sh
-ENTRYPOINT ["/app/entrypoint.sh"]
+COPY entrypoint.llamacpp.sh /app/entrypoint.llamacpp.sh
+ENTRYPOINT ["/app/entrypoint.llamacpp.sh"]
 #CMD ["python3", "server.py"]
