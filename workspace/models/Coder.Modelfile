@@ -1,4 +1,4 @@
-FROM qwen2.5-coder:14b
+FROM qwen3.6:27b
 
 # Target Configuration for Low-latency High-throughput Generation
 PARAMETER num_gpu 99

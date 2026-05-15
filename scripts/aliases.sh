@@ -3,14 +3,16 @@
 # Usage: source scripts/aliases.sh   (or add to ~/.bashrc)
 
 # Route Claude Code to local Ollama planner model (no cloud account tracing)
-alias planner='export ANTHROPIC_BASE_URL=http://localhost:11434/v1; export ANTHROPIC_AUTH_TOKEN=ollama; claude --model ollama/planner'
+alias claude-local-planner='export ANTHROPIC_BASE_URL=http://localhost:11434; export ANTHROPIC_AUTH_TOKEN=ollama; export ANTHROPIC_DEFAULT_HAIKU_MODEL=planner; export ANTHROPIC_DEFAULT_SONNET_MODEL=planner; export ANTHROPIC_DEFAULT_OPUS_MODEL=planner; CLAUDE_CONFIG_DIR=~/.claude-local; claude --model planner'
 
 # Route Claude Code to local Ollama coder model
-alias coder='export ANTHROPIC_BASE_URL=http://localhost:11434/v1; export ANTHROPIC_AUTH_TOKEN=ollama; claude --model ollama/coder'
+alias claude-local-coder='export ANTHROPIC_BASE_URL=http://localhost:11434; export ANTHROPIC_AUTH_TOKEN=ollama; export ANTHROPIC_DEFAULT_HAIKU_MODEL=planner; export ANTHROPIC_DEFAULT_SONNET_MODEL=planner; export ANTHROPIC_DEFAULT_OPUS_MODEL=planner; CLAUDE_CONFIG_DIR=~/.claude-local; claude --model coder'
 
 # Restore standard cloud routing (team / work profile)
-alias claude-work='unset ANTHROPIC_BASE_URL ANTHROPIC_AUTH_TOKEN; CLAUDE_CONFIG_DIR=~/.claude-work claude'
+alias claude-work='unset ANTHROPIC_BASE_URL ANTHROPIC_AUTH_TOKEN ANTHROPIC_DEFAULT_HAIKU_MODEL ANTHROPIC_DEFAULT_SONNET_MODEL ANTHROPIC_DEFAULT_OPUS_MODEL; CLAUDE_CONFIG_DIR=~/.claude-work claude'
 
-# Convenience alias for local planner model (same as 'planner' above, the switch to coder can be done interactively in the CLI)
-alias claude-local='export ANTHROPIC_BASE_URL=http://localhost:11434/v1; export ANTHROPIC_AUTH_TOKEN=ollama; ; CLAUDE_CONFIG_DIR=~/.claude-local; claude --model ollama/planner'
+# Convenience alias for local planner model (same as planner alias)
+alias claude-local='export ANTHROPIC_BASE_URL=http://localhost:11434; export ANTHROPIC_AUTH_TOKEN=ollama; export ANTHROPIC_DEFAULT_HAIKU_MODEL=planner; export ANTHROPIC_DEFAULT_SONNET_MODEL=planner; export ANTHROPIC_DEFAULT_OPUS_MODEL=planner; CLAUDE_CONFIG_DIR=~/.claude-local; claude'
 
+# Interactive local model picker (reads model list from Ollama and launches Claude)
+alias claude-local-picker='export ANTHROPIC_DEFAULT_HAIKU_MODEL=planner; export ANTHROPIC_DEFAULT_SONNET_MODEL=planner; export ANTHROPIC_DEFAULT_OPUS_MODEL=planner; bash scripts/claude-local-picker.sh'
