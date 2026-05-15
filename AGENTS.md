@@ -221,6 +221,8 @@ docker run --rm --gpus all nvidia/cuda:12.4.1-runtime nvidia-smi
 3. **Environment layering**: .env → docker-compose.yml env → container env (each overrides previous)
 4. **Jupyter-integrated**: llama.cpp Python server doubles as interactive dev environment
 5. **GPU-optional**: Services degrade gracefully if GPU unavailable (CPU-only fallback not tested)
+6. **Agent output convention**: After implementing changes, always prepare a brief follow-up PR-style note summarizing what changed, validation run, and any recommended next steps.
+7. **Agent improvement convention**: After each agent session, suggest 1-3 brief, actionable improvements to the agent workflow based on what happened in that session.
 
 ## Adding New Features
 
