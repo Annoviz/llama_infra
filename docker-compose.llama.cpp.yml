@@ -1,6 +1,6 @@
 services:
   llamacpp-server:
-    image: ${IMAGE:-ghcr.io/ggml-org/llama.cpp:full-cuda}
+    image: ${IMAGE:-ghcr.io/ggml-org/llama.cpp:full-cuda-b5350}
     shm_size: '8gb'
     entrypoint: ${ENTRYPOINT:-/app/llama-server} # default entrypoint: /app/tools.sh
     deploy:
@@ -25,7 +25,7 @@ services:
 
 
   llamacpp-server-py:
-    image: ${REGISTRY:-llamacpp-server-python}/llamacpp-server-py:${LLAMA_CPP_VERSION:-0.3.7}
+    image: ${REGISTRY:-llamacpp-server-python}/llamacpp-server-py:${LLAMA_CPP_VERSION:-0.3.19}
     shm_size: '8gb'
     entrypoint: ${ENTRYPOINT:-/app/entrypoint.sh}
     ulimits:
@@ -35,8 +35,9 @@ services:
         context: .
         dockerfile: Dockerfile.llamacpp-server-python
         args:
-          BASE_IMAGE: ${BASE_IMAGE:-ghcr.io/ggml-org/llama.cpp:full-cuda}
-          LLAMA_CPP_VERSION: ${LLAMA_CPP_VERSION:-0.3.7}
+          BASE_IMAGE: ${BASE_IMAGE:-ghcr.io/ggml-org/llama.cpp:full-cuda-b5350}
+          LLAMA_CPP_VERSION: ${LLAMA_CPP_VERSION:-0.3.19}
+          REQUIREMENTS_FILE: ${REQUIREMENTS_FILE:-requirements-llama_cpp_python-0.3.19.txt}
     deploy:
       resources:
         reservations:

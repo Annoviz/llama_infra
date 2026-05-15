@@ -1,3 +1,4 @@
+# Supplemental requirements for llama-cpp-python 0.3.19 server builds
 openai
 jupyter
 pydantic
@@ -6,7 +7,7 @@ streamlit
 colorama
 
 # for llama-cpp-python[server]
-diskcache>=5.6.1 
+diskcache>=5.6.1
 uvicorn>=0.22.0
 fastapi>=0.100.0
 pydantic-settings>=2.0.1

@@ -90,7 +90,7 @@ libarchive-c @ file:///home/conda/feedstock_root/build_artifacts/python-libarchi
 libmambapy @ file:///home/conda/feedstock_root/build_artifacts/mamba-split_1735806506118/work/libmambapy
 lief @ file:///home/conda/feedstock_root/build_artifacts/lief_1726040283347/work/api/python
 lintrunner==0.12.7
-llama_cpp_python==0.3.7
+llama_cpp_python==0.3.19
 markdown-it-py==3.0.0
 MarkupSafe @ file:///home/conda/feedstock_root/build_artifacts/markupsafe_1733219680183/work
 matplotlib-inline @ file:///home/conda/feedstock_root/build_artifacts/matplotlib-inline_1733416936468/work
