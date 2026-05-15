@@ -153,3 +153,23 @@ Update run (May 15, 2026):
 - Updated `AGENTS.md` manual examples and proactive keyword table to route the new agents.
 - Updated subagent indexes in `.github/agents/README.md` and `README.md`.
 
+### Agent Workflow Improvements (May 15, 2026)
+
+- Added `.github/agents/routing-smoke.md` with manual/proactive routing smoke cases.
+- Added explicit "when not to use this agent" boundaries across execution subagents.
+- Pruned overlapping trigger wording between `coding-agent` and `reviewer-agent` guidance.
+- Updated docs references in `.github/agents/README.md` and `README.md`.
+
+### Agent Workflow Improvements - Follow-up (May 15, 2026)
+
+- Enhanced `tools/check_agent_docs.py` to verify that concrete `.github/agents/*.md` paths referenced in `AGENTS.md` exist.
+- Added checker tests for router path extraction and missing-path failures.
+- Expanded `.github/agents/routing-smoke.md` with negative routing cases for each execution subagent.
+
+### Agent Workflow Improvements - Follow-up 2 (May 15, 2026)
+
+- Enhanced `tools/check_agent_docs.py` to fail on duplicate concrete subagent path references in `AGENTS.md`.
+- Added checker tests for duplicate path detection and clarification-smoke coverage.
+- Added an explicit clarification-question smoke case in `.github/agents/routing-smoke.md`.
+- Added a monthly keyword drift review note in `.github/agents/README.md`.
+

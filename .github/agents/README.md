@@ -25,6 +25,7 @@ Keywords and intents such as:
 2. Ensure each subagent file includes the required headings.
 3. Validate structure with `make check-agent-docs`.
 4. If required headings change, update both this file and the checker script.
+5. Review trigger keywords monthly and prune overlaps that reduce routing confidence.
 
 Current subagents:
 
@@ -35,6 +36,10 @@ Current subagents:
 - `coding-agent.md`
 - `reviewer-agent.md`
 - `commit-agent.md`
+
+Routing QA reference:
+
+- `routing-smoke.md` (non-execution positive/negative smoke cases for routing behavior)
 
 ## Boundaries
 

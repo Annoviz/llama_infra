@@ -8,11 +8,13 @@ instructions stay uniform and discoverable.
 from __future__ import annotations
 
 import argparse
+import re
 from pathlib import Path
 from typing import Iterable, List
 
 ROOT = Path(__file__).resolve().parents[1]
 AGENTS_DIR = ROOT / ".github" / "agents"
+ROUTER_FILE = ROOT / "AGENTS.md"
 
 REQUIRED_HEADINGS = [
     "## Purpose",
@@ -55,6 +57,36 @@ def validate_file(path: Path) -> List[str]:
     return validate_agent_markdown(path.read_text(encoding="utf-8"))
 
 
+def extract_agent_paths_from_router(text: str) -> List[str]:
+    """Extract concrete .github/agents markdown paths from AGENTS.md text."""
+    matches = re.findall(r"\.github/agents/[a-z0-9-]+\.md", text)
+    return sorted(set(matches))
+
+
+def validate_router_agent_paths(router_path: Path) -> List[str]:
+    if not router_path.exists():
+        return [f"Missing router file: {router_path.relative_to(ROOT)}"]
+
+    text = router_path.read_text(encoding="utf-8")
+    all_paths = re.findall(r"\.github/agents/[a-z0-9-]+\.md", text)
+    paths = sorted(set(all_paths))
+    errors: List[str] = []
+
+    if not all_paths:
+        errors.append("No concrete .github/agents/*.md paths found in AGENTS.md")
+        return errors
+
+    duplicates = sorted({path for path in all_paths if all_paths.count(path) > 1})
+    for rel_path in duplicates:
+        errors.append(f"Duplicate subagent path reference in AGENTS.md: {rel_path}")
+
+    for rel_path in paths:
+        if not (ROOT / rel_path).exists():
+            errors.append(f"Referenced subagent path does not exist: {rel_path}")
+
+    return errors
+
+
 def run(paths: Iterable[Path]) -> int:
     failed = False
     for path in paths:
@@ -64,6 +96,13 @@ def run(paths: Iterable[Path]) -> int:
             print(f"{path.relative_to(ROOT)}")
             for item in errors:
                 print(f"  - {item}")
+
+    router_errors = validate_router_agent_paths(ROUTER_FILE)
+    if router_errors:
+        failed = True
+        print(f"{ROUTER_FILE.relative_to(ROOT)}")
+        for item in router_errors:
+            print(f"  - {item}")
 
     if failed:
         print("\nAgent docs check failed.")

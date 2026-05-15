@@ -37,6 +37,7 @@ Keywords and intents such as:
 - Do not own model JSON tuning beyond dependency implications.
 - Do not own generic service incident triage.
 - Coordinate docs updates via `docs-sync-agent`.
+- When the task is only commit/push operations, route to `commit-agent`.
 
 ## Handoff Back
 

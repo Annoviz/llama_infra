@@ -38,6 +38,7 @@ Keywords and intents such as:
 - Do not manage image tag/package updates owned by `update-manager-agent`.
 - Do not own stack lifecycle remediation beyond config-specific checks.
 - Keep broad docs updates delegated to `docs-sync-agent`.
+- When the request is a generic code refactor unrelated to model config, route to `coding-agent`.
 
 ## Handoff Back
 

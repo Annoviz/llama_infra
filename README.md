@@ -135,6 +135,9 @@ make check-agent-docs
 make verify-agent-routing
 ```
 
+Routing smoke examples are documented in `.github/agents/routing-smoke.md`.
+They include positive routing examples and negative "avoid route" cases per execution subagent.
+
 Manual examples:
 
 ```text

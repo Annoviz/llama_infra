@@ -19,7 +19,7 @@ Keywords and intents such as:
 - "add feature"
 - "refactor"
 - "fix bug"
-- "write tests"
+- "implementation"
 - "patch"
 
 ## Workflow
@@ -35,6 +35,7 @@ Keywords and intents such as:
 - Do not own environment stack operations (`docker-ops-agent`).
 - Do not own version-bump automation (`update-manager-agent`).
 - Route documentation-only work to `docs-sync-agent`.
+- When the user primarily asks for review/audit findings, use `reviewer-agent` instead.
 
 ## Handoff Back
 

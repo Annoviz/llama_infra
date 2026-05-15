@@ -35,6 +35,7 @@ Keywords and intents such as:
 - Do not bypass validation checks when they are part of the requested workflow.
 - Do not rewrite history unless explicitly requested.
 - Do not force push unless explicitly requested.
+- When there are unresolved implementation or review tasks, complete those before using this agent.
 
 ## Handoff Back
 

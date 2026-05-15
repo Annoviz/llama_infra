@@ -35,6 +35,7 @@ Keywords and intents such as:
 - Focus on review output; avoid broad rewrites unless requested.
 - Route implementation follow-ups to `coding-agent`.
 - Route docs-only updates to `docs-sync-agent`.
+- When the user asks to apply code changes directly, route to `coding-agent`.
 
 ## Handoff Back
 

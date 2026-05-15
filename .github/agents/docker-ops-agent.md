@@ -37,6 +37,7 @@ Keywords and intents such as:
 - Do not edit model JSON internals unless needed only for basic path validation.
 - Do not perform dependency/version bump logic owned by `update-manager-agent`.
 - Do not skip documentation sync when workflows change.
+- When the task is a pure code implementation request, route to `coding-agent`.
 
 ## Handoff Back
 

@@ -75,3 +75,93 @@ def test_agents_readme_passes_checker_contract():
     assert errors == []
 
 
+def test_extract_agent_paths_from_router_finds_concrete_paths():
+    router_text = """
+    - `.github/agents/docker-ops-agent.md`
+    - `.github/agents/reviewer-agent.md`
+    - `.github/agents/*.md`
+    """
+    paths = check_agent_docs.extract_agent_paths_from_router(router_text)
+    assert paths == [
+        ".github/agents/docker-ops-agent.md",
+        ".github/agents/reviewer-agent.md",
+    ]
+
+
+def test_validate_router_agent_paths_reports_missing_file():
+    with tempfile.TemporaryDirectory() as td:
+        tmp_root = Path(td)
+        router = tmp_root / "AGENTS.md"
+        router.write_text(
+            "- `.github/agents/exists-agent.md`\n- `.github/agents/missing-agent.md`\n",
+            encoding="utf-8",
+        )
+        agents_dir = tmp_root / ".github" / "agents"
+        agents_dir.mkdir(parents=True)
+        (agents_dir / "exists-agent.md").write_text("# exists-agent\n", encoding="utf-8")
+
+        original_root = check_agent_docs.ROOT
+        try:
+            check_agent_docs.ROOT = tmp_root
+            errors = check_agent_docs.validate_router_agent_paths(router)
+        finally:
+            check_agent_docs.ROOT = original_root
+
+        assert errors == [
+            "Referenced subagent path does not exist: .github/agents/missing-agent.md"
+        ]
+
+
+def test_validate_router_agent_paths_reports_duplicate_reference():
+    with tempfile.TemporaryDirectory() as td:
+        tmp_root = Path(td)
+        router = tmp_root / "AGENTS.md"
+        router.write_text(
+            "- `.github/agents/reviewer-agent.md`\n"
+            "- `.github/agents/reviewer-agent.md`\n",
+            encoding="utf-8",
+        )
+        agents_dir = tmp_root / ".github" / "agents"
+        agents_dir.mkdir(parents=True)
+        (agents_dir / "reviewer-agent.md").write_text(
+            "# reviewer-agent\n", encoding="utf-8"
+        )
+
+        original_root = check_agent_docs.ROOT
+        try:
+            check_agent_docs.ROOT = tmp_root
+            errors = check_agent_docs.validate_router_agent_paths(router)
+        finally:
+            check_agent_docs.ROOT = original_root
+
+        assert errors == [
+            "Duplicate subagent path reference in AGENTS.md: .github/agents/reviewer-agent.md"
+        ]
+
+
+def test_routing_smoke_has_negative_case_for_each_execution_subagent():
+    routing_smoke = (
+        Path(__file__).resolve().parents[1] / ".github" / "agents" / "routing-smoke.md"
+    ).read_text(encoding="utf-8")
+
+    expected_targets = [
+        "`docker-ops-agent`",
+        "`model-config-agent`",
+        "`update-manager-agent`",
+        "`docs-sync-agent`",
+        "`coding-agent`",
+        "`reviewer-agent`",
+        "`commit-agent`",
+    ]
+
+    for target in expected_targets:
+        assert target in routing_smoke
+
+
+def test_routing_smoke_has_clarification_question_example():
+    routing_smoke = (
+        Path(__file__).resolve().parents[1] / ".github" / "agents" / "routing-smoke.md"
+    ).read_text(encoding="utf-8")
+    assert "Clarification question" in routing_smoke
+
+

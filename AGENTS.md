@@ -63,7 +63,7 @@ Keyword scoring table (strict mode, 0-5 scale):
 | `.github/agents/model-config-agent.md` | `LLM_CONFIG`, `workspace/configs`, `GGUF`, `mmproj`, `model_alias`, `chat_format` | 5 |
 | `.github/agents/update-manager-agent.md` | `updates-check`, `updates-suggest`, `updates-apply`, `requirements-dev`, `LLAMA_CPP_VERSION`, `tools/update_manager.py` | 5 |
 | `.github/agents/docs-sync-agent.md` | `README`, `CHANGELOG`, `docs`, `document`, `sync` | 4 |
-| `.github/agents/coding-agent.md` | `implement`, `feature`, `refactor`, `fix bug`, `write tests`, `patch` | 3 |
+| `.github/agents/coding-agent.md` | `implement`, `feature`, `refactor`, `fix bug`, `implementation`, `patch` | 3 |
 | `.github/agents/reviewer-agent.md` | `review`, `code review`, `audit`, `risk`, `regression`, `missing tests` | 5 |
 | `.github/agents/commit-agent.md` | `commit`, `git commit`, `push`, `commit and push`, `stage all`, `prepare commit` | 5 |
 

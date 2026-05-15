@@ -32,6 +32,7 @@ Keywords and intents such as:
 
 - Do not make infra or code behavior changes beyond docs.
 - If docs reveal implementation inconsistency, hand off to the owning subagent.
+- When the user asks for review findings (not doc edits), route to `reviewer-agent`.
 
 ## Handoff Back
 
