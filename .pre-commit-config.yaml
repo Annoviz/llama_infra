@@ -31,4 +31,17 @@ repos:
     hooks:
       - id: black
 
+  - repo: local
+    hooks:
+      - id: check-agent-docs
+        name: check-agent-docs
+        entry: make check-agent-docs
+        language: system
+        pass_filenames: false
+      - id: verify-agent-routing
+        name: verify-agent-routing
+        entry: python3 -m pytest -q tests/test_agent_docs_check.py
+        language: system
+        pass_filenames: false
+
 

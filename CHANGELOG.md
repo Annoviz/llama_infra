@@ -96,3 +96,60 @@ Update run (May 15, 2026):
   - `sse-starlette>=1.6.1` -> `sse-starlette>=3.4.4`
   - `PyYAML>=5.1` -> `PyYAML>=6.0.3`
 - No changes were applied in this run to Open WebUI pin (`v0.8.11`) or the llama.cpp CUDA base image tag (`full-cuda-b5350`).
+
+## Agent Routing Update - May 15, 2026
+
+### Added
+
+- Added Markdown-based subagent specs under `.github/agents/`:
+  - `.github/agents/README.md`
+  - `.github/agents/docker-ops-agent.md`
+  - `.github/agents/model-config-agent.md`
+  - `.github/agents/update-manager-agent.md`
+  - `.github/agents/docs-sync-agent.md`
+- Added subagent docs checker script: `tools/check_agent_docs.py`.
+- Added unit tests for docs checker: `tests/test_agent_docs_check.py`.
+- Added CI workflow for docs checker: `.github/workflows/agents-docs-check.yml`.
+
+### Changed
+
+- Refactored `AGENTS.md` into a top-level orchestrator/router.
+- Moved detailed task guidance from `AGENTS.md` into specialized subagent files.
+- Added dual routing behavior:
+  - manual explicit subagent routing,
+  - proactive keyword/intent routing.
+- Added strict proactive routing guidance with a keyword scoring table and tie-break rules in `AGENTS.md`.
+- Added a required `## Example Prompt` section to each subagent markdown file.
+- Added fallback policy for ambiguous and multi-domain tasks.
+
+### Documentation
+
+- Updated `README.md` with a new "Copilot subagents" section covering:
+  - discovery convention (`.github/agents/*.md`),
+  - available subagents,
+  - manual and proactive routing examples,
+  - fallback behavior.
+
+### Follow-up Refinements (May 15, 2026)
+
+- Updated `tools/check_agent_docs.py` to include `.github/agents/README.md` in validation.
+- Reworked `.github/agents/README.md` to conform to the same required heading contract.
+- Updated strict routing score weights in `AGENTS.md` to explicit 0-5 values.
+- Added `make check-agent-docs` target in `Makefile` and aligned docs/CI to use it.
+
+### Additional Hardening (May 15, 2026)
+
+- Added `make verify-agent-routing` to run `check-agent-docs` plus `tests/test_agent_docs_check.py`.
+- Added local pre-commit hooks for `check-agent-docs` and routing checker tests.
+- Expanded checker tests with deterministic malformed-heading assertions.
+- Updated CI workflow to run `make verify-agent-routing`.
+- Added proactive routing minimum confidence threshold guidance in `AGENTS.md` (`>= 5` to auto-route).
+
+### Subagent Expansion (May 15, 2026)
+
+- Added `.github/agents/coding-agent.md` for implementation/refactor/test tasks.
+- Added `.github/agents/reviewer-agent.md` for review/risk/regression-focused tasks.
+- Added `.github/agents/commit-agent.md` for git commit/push workflows.
+- Updated `AGENTS.md` manual examples and proactive keyword table to route the new agents.
+- Updated subagent indexes in `.github/agents/README.md` and `README.md`.
+

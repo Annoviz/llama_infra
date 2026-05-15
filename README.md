@@ -101,9 +101,60 @@ make precommit-install
 # run all hooks manually
 make precommit-run
 
+# run focused agent routing verification
+make verify-agent-routing
+
 # refresh pinned hook revisions
 make precommit-update
 ```
+
+## Copilot subagents
+
+This repo supports simple Markdown-based subagent discovery via `.github/agents/*.md`.
+
+Available subagents:
+
+- `docker-ops-agent` -> stack lifecycle, logs, GPU checks
+- `model-config-agent` -> `workspace/configs/*.json`, `LLM_CONFIG`, GGUF/mmproj wiring
+- `update-manager-agent` -> `tools/update_manager.py`, managed version/dependency updates
+- `docs-sync-agent` -> `README.md` and `CHANGELOG.md` synchronization
+- `coding-agent` -> implementation, refactors, bug fixes, and test updates
+- `reviewer-agent` -> review findings, regressions, and missing-test analysis
+- `commit-agent` -> stage, commit, and push workflows with status reporting
+
+Routing modes:
+
+- Manual routing: explicitly name a subagent in your prompt
+- Proactive routing: infer subagent from task intent/keywords
+- Strict proactive mode: use keyword scoring in `AGENTS.md` to pick the highest-confidence match
+
+Validate subagent docs structure locally:
+
+```bash
+make check-agent-docs
+make verify-agent-routing
+```
+
+Manual examples:
+
+```text
+Use update-manager-agent to run the update proposal flow.
+Route this to model-config-agent and add a new config for a multimodal model.
+```
+
+Proactive examples:
+
+```text
+AnythingLLM is not starting, check logs and fix startup.
+Add a new qwen config with model_alias and mmproj path.
+Check for newer Docker tags and apply safe updates.
+```
+
+Fallback behavior:
+
+- If intent is ambiguous, the orchestrator asks one short clarification question.
+- If no confident match exists, the orchestrator handles the task directly.
+- If work spans domains, the orchestrator can sequence multiple subagents.
 
 # Contact
 * Author: Dima Kanevsky

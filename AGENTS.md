@@ -1,244 +1,95 @@
-# AGENTS.md - AI Agent Guide for llama_infra
+# AGENTS.md - Router and Global Rules for llama_infra
 
-This project is a **Docker-based LLM infrastructure** supporting multiple inference engines (Ollama, llama.cpp) and web interfaces (AnythingLLM, Open WebUI). Here's what AI agents need to know.
+This file is the top-level orchestrator for agent behavior in this repo.
 
-## Architecture Overview
+Detailed, task-specific guidance is delegated to Markdown subagents in
+`.github/agents/`.
 
-**Two independent Docker stacks:**
+## Architecture Snapshot
 
-1. **Main Stack** (`docker-compose.yml`): Ollama server + AnythingLLM + Open WebUI
-   - Ollama: LLM inference on port 11434
-   - AnythingLLM: Web UI on port 3001 (dependency: Ollama)
-   - Open WebUI: Web UI on port 3002 (dependency: Ollama)
+Two independent Docker stacks are supported:
 
-2. **llama.cpp Stack** (`docker-compose.llama.cpp.yml`): C++ and Python inference servers
-   - Native C++ server on port 8080
-   - Python server on port 18000 (FastAPI) + 18888 (Jupyter)
+1. Main stack (`docker-compose.yml`): Ollama + AnythingLLM + Open WebUI
+2. llama.cpp stack (`docker-compose.llama.cpp.yml`): native C++ server + Python server
 
-**Critical architectural decision**: Two separate compose files allow independent deployment of different LLM inference implementations. Services are NOT cross-stack compatible.
+These stacks are intentionally separate; do not assume cross-stack compatibility.
 
-## Key Workflows & Commands
+## Global Rules (Always Apply)
 
-**Always use `make` commands, not docker commands directly:**
+1. Use `make` commands instead of raw `docker compose` commands when a matching Make target exists.
+2. Keep settings config-first: model/server values belong in JSON configs and env vars, not hardcoded values.
+3. Preserve environment layering: `.env` -> compose env -> container env.
+4. Treat `workspace/requirements.txt` as frozen (report-only in automation).
+5. Keep data safety expectations explicit (for example, never suggest deleting `./models`).
+6. After implementation, include a brief PR-style note with: what changed, validation run, and recommended next steps.
+7. Keep docs in sync: update `README.md` and/or `CHANGELOG.md` when behavior or workflow changes.
+8. End each agent session with 1-3 actionable improvements to the agent workflow.
 
-```bash
-# Main stack operations (Ollama + web UIs)
-make up-main          # Start all three services
-make down-main        # Stop main stack
-make ps-main          # Check status
-make logs-ollama      # View Ollama logs (use for debugging)
+## Subagent Discovery Convention (Simple Markdown)
 
-# llama.cpp stack operations
-make up-llamacpp      # Start C++ server
-make up-llamacpp-py   # Start Python server
-make down-llama       # Stop llama.cpp stack
+- Location: `.github/agents/*.md`
+- Each subagent file should include these headings:
+  - `# <Agent Name>`
+  - `## Purpose`
+  - `## Owns`
+  - `## Triggers`
+  - `## Workflow`
+  - `## Boundaries`
+  - `## Handoff Back`
+  - `## Example Prompt`
 
-# Configuration & diagnostics
-make config-all       # Validate both compose files
-make pull-all         # Pre-pull all images
-make gpu-host         # Check NVIDIA GPU availability
+## Routing Modes
 
-# Version maintenance
-make updates-check    # Check Docker tags + requirements-dev.txt package updates
-make updates-suggest  # Write .update-manager-proposal.json with suggestions
-make updates-apply    # Interactive yes/no prompt before writing changes
-```
+### 1) Manual (explicit)
 
-**Makefile pattern**: All targets expand to `docker compose -f <file> <command>`. Inspect the Makefile (lines 4-5) to understand composition file selection.
+If the user explicitly requests a subagent by name, route directly to that subagent.
 
-## Configuration & Model Management
+Examples:
+- "Use `update-manager-agent` for this"
+- "Route this to the model config subagent"
+- "Use `coding-agent` to implement the fix"
+- "Use `reviewer-agent` to review this PR"
+- "Use `commit-agent` to commit and push the changes"
 
-**Model loading mechanism** (defined in `entrypoint.sh` and `docker-compose.llama.cpp.yml`):
+### 2) Proactive (intent/keyword)
 
-1. Environment variable `LLM_CONFIG` specifies config file name (default: `config.json`)
-2. Config file path resolved to `/app/workspace/configs/${LLM_CONFIG}`
-3. Models specified in JSON config with full paths `/models/<model-name>/<file>`
-4. Multiple models per config file supported (array in JSON)
+If no explicit subagent is named, infer the best match from the intent and keywords.
 
-**Config file structure** (`workspace/configs/*.json`):
-```json
-{
-  "host": "0.0.0.0",
-  "port": 8000,
-  "models": [{
-    "model": "/models/path/model.gguf",
-    "clip_model_path": "/models/path/mmproj.gguf",  // For multimodal models
-    "model_alias": "user-friendly-name",
-    "chat_format": "qwen" | "llava-1-5",            // Model-specific format
-    "n_gpu_layers": -1,                             // -1 = all layers on GPU
-    "n_threads": 12,
-    "n_batch": 512,
-    "n_ctx": 4096,
-    "verbose": true
-  }]
-}
-```
+Keyword scoring table (strict mode, 0-5 scale):
 
-**To add new model configurations**: Copy existing config, update paths and model_alias, mount at runtime.
+| Subagent | Keyword examples | Score per match |
+|---|---|---|
+| `.github/agents/docker-ops-agent.md` | `make up-main`, `make logs-ollama`, `ps-main`, `gpu`, `nvidia-smi`, `compose` | 5 |
+| `.github/agents/model-config-agent.md` | `LLM_CONFIG`, `workspace/configs`, `GGUF`, `mmproj`, `model_alias`, `chat_format` | 5 |
+| `.github/agents/update-manager-agent.md` | `updates-check`, `updates-suggest`, `updates-apply`, `requirements-dev`, `LLAMA_CPP_VERSION`, `tools/update_manager.py` | 5 |
+| `.github/agents/docs-sync-agent.md` | `README`, `CHANGELOG`, `docs`, `document`, `sync` | 4 |
+| `.github/agents/coding-agent.md` | `implement`, `feature`, `refactor`, `fix bug`, `write tests`, `patch` | 3 |
+| `.github/agents/reviewer-agent.md` | `review`, `code review`, `audit`, `risk`, `regression`, `missing tests` | 5 |
+| `.github/agents/commit-agent.md` | `commit`, `git commit`, `push`, `commit and push`, `stage all`, `prepare commit` | 5 |
 
-## Environment & Dependency Management
+Tie-break rules:
 
-**Requirements files and roles:**
+1. Prefer exact command/file matches over generic words.
+2. Prefer the subagent owning the file(s) the user explicitly mentions.
+3. If scores tie across domains, ask one concise clarification question.
 
-| File | Purpose | When Used |
-|------|---------|-----------|
-| `requirements-client.txt` | Minimal: openai, ollama, jupyter | Local development, client scripts |
-| `requirements-dev.txt` | Main editable dependency set for Python server | Docker build and day-to-day updates |
-| `workspace/requirements.txt` | Frozen environment snapshot | Jupyter notebooks / reproducible final state |
+Minimum confidence threshold:
 
-**Version pinning strategy**: Base images have pinned tags (`ollama/ollama:0.18.3`, `ghcr.io/ggml-org/llama.cpp:full-cuda-b5350`). Use `Makefile` overrides to test new versions:
-```bash
-OLLAMA_VERSION=0.19.0 make config-main  # View changes without deploying
-```
+- Auto-route only when the best subagent score is `>= 5`.
+- If best score is `< 5`, ask one concise clarification question before routing.
 
-**Update manager behavior** (`tools/update_manager.py`):
-- Updates only managed defaults in compose/dockerfile + `requirements-dev.txt`
-- Treats `workspace/requirements.txt` as frozen snapshot (report-only / never edited)
-- `make updates-apply` always asks for interactive confirmation (`y`/`yes`) unless explicitly bypassed
+## Routing Decision Order
 
-## GPU Configuration & NVIDIA Docker
+1. Honor explicit/manual routing request.
+2. Otherwise, select the highest-confidence proactive match.
+3. If work spans domains, run a primary subagent then secondary subagent(s) in sequence.
+4. If ambiguous, ask one concise clarification question.
+5. If no confident match, continue in orchestrator mode with global rules.
 
-**GPU binding happens at container level** (`docker-compose.yml` lines 10-13):
-```yaml
-devices:
-  - driver: nvidia
-    device_ids: ["${GPU_ID:-0}"]      # Override with GPU_ID=1
-    capabilities: [gpu]
-```
+## Fallback and Escalation
 
-**Verify GPU access:**
-```bash
-make gpu-host                    # nvidia-smi on host
-make gpu-smoke-llamacpp          # Test CUDA in container
-```
-
-**Common issue**: Container sees GPU but CUDA unavailable → Check `LD_LIBRARY_PATH=/usr/local/cuda/lib64:$LD_LIBRARY_PATH` in Dockerfile (lines 6-9).
-
-## Volumes & Data Persistence
-
-**Standard mounting pattern** (all compose files):
-- `/models`: Host models → Container `/models` (read-only workload)
-- `./workspace`: Project workspace → Container `/app/workspace`
-- `.jupyter`: Jupyter config → Container `/root/.jupyter`
-- `data/`: Persistent UI state → Container data paths
-
-**Override paths via environment** (`.env` file):
-```dotenv
-MODELS=/custom/path/to/models        # Default: ./models
-DATA_DIR=/custom/path/to/data        # Default: ./data
-```
-
-**Critical**: Never `rm -rf ./models` after deployment; models are large and downloaded on-demand.
-
-## Python Server Integration (llama-cpp-python)
-
-**Server runs dual processes** (`entrypoint.sh`):
-1. Jupyter Lab on port 8888 (background: `jupyter-lab --no-browser --allow-root`)
-2. FastAPI llama.cpp server on port 8000 (foreground)
-
-**Server start command** (line 7):
-```bash
-python3 -m llama_cpp.server --config_file /app/workspace/configs/${LLM_CONFIG}
-```
-
-**Exposed ports**:
-- `18000:8000` - FastAPI health/inference (maps to container 8000)
-- `18888:8888` - Jupyter notebooks
-
-**Python client example** (use `requirements-client.txt` + Jupyter):
-```python
-from openai import OpenAI
-client = OpenAI(api_key="not-needed", base_url="http://localhost:18000/v1")
-response = client.chat.completions.create(
-    model="qwen2.5-vl",  # matches config "model_alias"
-    messages=[{"role": "user", "content": "Hello"}]
-)
-```
-
-## Build & Deployment Patterns
-
-**Building custom Python server** (uses build args for flexibility):
-```bash
-LLAMA_CPP_VERSION=0.3.19 \
-REQUIREMENTS_FILE=requirements-dev.txt \
-make build-llamacpp-py
-```
-
-**Dockerfile patterns** (`Dockerfile.llamacpp-server-python`):
-- Line 1: ARG-first pattern allows base image override
-- Line 11: nvcc verification ensures CUDA compilation
-- Line 24: CMAKE_CUDA_ARCHITECTURES for multi-GPU compatibility (70, 75, 80, 86)
-
-**Registry override** (`.env` REGISTRY var):
-- Default: local build (`llamacpp-server-python/llamacpp-server-py:0.3.19`)
-- Custom: `dk-server:5000/llamacpp-server-py:0.3.19` (push/pull model)
-
-## Service Dependencies & Health Checks
-
-**Declare dependency order** (compose `depends_on` at top-level service):
-- AnythingLLM requires Ollama healthy
-- Open WebUI requires Ollama healthy
-- Python server independent; Native C++ server independent
-
-**No explicit health checks in compose files** → Watch logs for startup:
-```bash
-make logs-ollama 2>&1 | grep -i "listening\|ready\|error"
-```
-
-**Port conflicts**: Ollama hardcoded to 11434. If port taken, rebuild image won't help; check host processes:
-```bash
-sudo lsof -i :11434
-```
-
-## Debugging & Common Issues
-
-**Service won't start?**
-1. Check compose file syntax: `make config-all`
-2. View logs immediately: `make logs-<service-name>`
-3. Verify volumes mounted: `docker inspect llama_infra-<service>-1 | grep Mounts`
-
-**GPU not detected in container?**
-```bash
-# From host
-nvidia-smi  # See GPU
-
-# From container
-docker exec <container> nvidia-smi  # Should match host
-
-# If container nvidia-smi fails: missing driver or runtime
-docker run --rm --gpus all nvidia/cuda:12.4.1-runtime nvidia-smi
-```
-
-**Model load failures** (check config paths):
-- Error: `model file not found` → `/models/path` doesn't exist inside container
-- Verify host mount: `docker inspect <container> | grep -A5 Mounts`
-- Note: MODELS in `.env` uses full host path; compose file volume defaults to `./models`
-
-## Project Conventions
-
-1. **Config-first approach**: All model/host settings in JSON configs, not hardcoded
-2. **Dual-stack design**: Supports experimenting with different inference engines simultaneously
-3. **Environment layering**: .env → docker-compose.yml env → container env (each overrides previous)
-4. **Jupyter-integrated**: llama.cpp Python server doubles as interactive dev environment
-5. **GPU-optional**: Services degrade gracefully if GPU unavailable (CPU-only fallback not tested)
-6. **Agent output convention**: After implementing changes, always prepare a brief follow-up PR-style note summarizing what changed, validation run, and any recommended next steps.
-7. **Agent improvement convention**: After each agent session, suggest 1-3 brief, actionable improvements to the agent workflow based on what happened in that session.
-
-## Adding New Features
-
-**Add new service to main stack:**
-1. Add service block to `docker-compose.yml`
-2. Set `depends_on: [ollama-server]` if needs Ollama
-3. Add Makefile targets: `up-<service>`, `logs-<service>`, `down-main` already stops it
-4. Test: `make config-main` then `make up-main`
-
-**Add new llama.cpp model config:**
-1. Download GGUF + mmproj files to `./models/<model-name>/`
-2. Copy `workspace/configs/config.json` to `workspace/configs/<model-name>-config.json`
-3. Update paths and `model_alias`
-4. Deploy: `LLM_CONFIG=<model-name>-config.json docker compose -f docker-compose.llama.cpp.yml up -d llamacpp-server-py`
-
-**Extend Python server dependencies:**
-- Edit `requirements-dev.txt`
-- Rebuild: `make build-llamacpp-py`
-- Restart: `make restart-llamacpp-py`
+- If a task exceeds a subagent boundary, hand back to orchestrator with:
+  - current findings,
+  - remaining tasks,
+  - required next subagent (if obvious).
+- If user intent changes mid-task, re-route using the same decision order.

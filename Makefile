@@ -10,6 +10,7 @@ LLAMA_CPP_IMAGE ?= ghcr.io/ggml-org/llama.cpp:full-cuda-b5350
 	pull-main pull-llama pull-all \
 	build-llamacpp-py \
 	updates-check updates-suggest updates-apply \
+	check-agent-docs verify-agent-routing \
 	precommit-install precommit-run precommit-update \
 	up-ollama up-anythingllm up-open-webui up-main \
 	up-llamacpp up-llamacpp-py up-llama \
@@ -43,6 +44,8 @@ help:
 	@printf "  make updates-suggest     # Check and write .update-manager-proposal.json\n"
 	@printf "  make updates-apply       # Show diff and apply after interactive prompt\n"
 	@printf "\nCode quality:\n"
+	@printf "  make check-agent-docs    # Validate required headings in .github/agents/*.md\n"
+	@printf "  make verify-agent-routing # Run agent docs checker + unit tests\n"
 	@printf "  make precommit-install   # Install pre-commit git hooks\n"
 	@printf "  make precommit-run       # Run all pre-commit hooks on all files\n"
 	@printf "  make precommit-update    # Update pinned hook revisions in .pre-commit-config.yaml\n"
@@ -78,6 +81,12 @@ updates-suggest:
 
 updates-apply:
 	python3 tools/update_manager.py apply
+
+check-agent-docs:
+	python3 tools/check_agent_docs.py
+
+verify-agent-routing: check-agent-docs
+	python3 -m pytest -q tests/test_agent_docs_check.py
 
 precommit-install:
 	pre-commit install
