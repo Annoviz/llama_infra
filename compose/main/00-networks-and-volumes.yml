@@ -1,0 +1,8 @@
+networks:
+  ollama-bridge:
+    driver: bridge
+  falkordb-network:
+    driver: bridge
+
+volumes:
+  falkordb-data:

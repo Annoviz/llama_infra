@@ -5,14 +5,14 @@ It assumes a Linux host with NVIDIA GPU support and Docker configured for GPUs.
 
 ## Scope and safety
 
-- Main target stack: `docker-compose.yml` (`ollama-server`, optional UIs).
+- Main target stack: split compose files under `compose/main/` (prefer Make targets).
 - Prefer Make targets when available (`make up-ollama`, `make logs-ollama`, etc.).
 - Keep configuration layered: `.env` -> compose defaults -> container environment.
 - Do not delete local model assets in `./models` unless you explicitly intend data loss.
 
 ## Phase 1 - Bring up Ollama with repo workflow
 
-1. Review defaults in `docker-compose.yml` and optional overrides in `.env`.
+1. Review defaults in `compose/main/*.yml` and optional overrides in `.env`.
 2. Start only Ollama first, then validate service and logs.
 
 ```bash
@@ -30,7 +30,10 @@ make gpu-host
 4. Optional: run a container-level smoke check if needed.
 
 ```bash
-docker compose -f docker-compose.yml exec -T ollama-server ollama --version
+docker compose --project-directory . \
+    -f compose/main/00-networks-and-volumes.yml \
+    -f compose/main/10-ollama.yml \
+    exec -T ollama-server ollama --version
 ```
 
 ## Phase 2 - Build planner and coder model aliases
@@ -83,13 +86,19 @@ set -euo pipefail
 # Set LLAMA_INFRA_DIR to the repo root if not already exported in your shell
 LLAMA_INFRA_DIR="${LLAMA_INFRA_DIR:-$(cd "$(dirname "$0")" && pwd)}"
 
-docker compose -f "$LLAMA_INFRA_DIR/docker-compose.yml" \
+docker compose --project-directory "$LLAMA_INFRA_DIR" \
+    -f "$LLAMA_INFRA_DIR/compose/main/00-networks-and-volumes.yml" \
+    -f "$LLAMA_INFRA_DIR/compose/main/10-ollama.yml" \
   exec -T ollama-server ollama create planner -f - < "$LLAMA_INFRA_DIR/workspace/models/Planner.Modelfile"
 
-docker compose -f "$LLAMA_INFRA_DIR/docker-compose.yml" \
+docker compose --project-directory "$LLAMA_INFRA_DIR" \
+    -f "$LLAMA_INFRA_DIR/compose/main/00-networks-and-volumes.yml" \
+    -f "$LLAMA_INFRA_DIR/compose/main/10-ollama.yml" \
   exec -T ollama-server ollama create coder -f - < "$LLAMA_INFRA_DIR/workspace/models/Coder.Modelfile"
 
-docker compose -f "$LLAMA_INFRA_DIR/docker-compose.yml" \
+docker compose --project-directory "$LLAMA_INFRA_DIR" \
+    -f "$LLAMA_INFRA_DIR/compose/main/00-networks-and-volumes.yml" \
+    -f "$LLAMA_INFRA_DIR/compose/main/10-ollama.yml" \
   exec -T ollama-server ollama list
 EOF
 
@@ -213,7 +222,10 @@ python3 workspace/benchmark.py
 ```bash
 make ps-main
 make logs-ollama
-docker compose -f docker-compose.yml exec -T ollama-server ollama list
+docker compose --project-directory . \
+    -f compose/main/00-networks-and-volumes.yml \
+    -f compose/main/10-ollama.yml \
+    exec -T ollama-server ollama list
 ```
 
 If you hit VRAM pressure, tune model context and parallelism first (`OLLAMA_NUM_PARALLEL`, `OLLAMA_MAX_LOADED_MODELS`, and per-model context settings) before changing disk/model layout.

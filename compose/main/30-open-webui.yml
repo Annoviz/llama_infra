@@ -1,0 +1,17 @@
+services:
+  open-webui:
+    image: ghcr.io/open-webui/open-webui:${OW_VERSION:-v0.8.11}
+    container_name: open-webui
+    ports:
+      - "3002:8080"
+    cap_add:
+      - SYS_ADMIN
+    environment:
+      - OLLAMA_BASE_URL=http://ollama-server:11434
+    volumes:
+      - ${DATA_DIR:-./data}/open-webui:/app/backend/data
+    networks:
+      - ollama-bridge
+    restart: always
+    depends_on:
+      - ollama-server

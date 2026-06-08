@@ -30,7 +30,41 @@ make up-anythingllm
 # ollama-server + open-webui = localhost:3002
 make up-open-webui
 
+# FalkorDB local graph database = localhost:6379, browser = localhost:3000
+make up-falkordb
+
+# FalkorDB MCP server (HTTP transport) = localhost:3005
+make up-falkordb-mcp
+
+# Start all core services + FalkorDB + FalkorDB MCP
+make up-main-all
+
 ```
+
+## Compose layout (split by component)
+
+Main stack compose files are split under `compose/main/` and combined by `Makefile` targets:
+
+- `00-networks-and-volumes.yml`
+- `10-ollama.yml`
+- `20-anythingllm.yml`
+- `30-open-webui.yml`
+- `40-falkordb.yml`
+- `50-falkordb-mcp.yml`
+
+Useful targets:
+
+- `make config-main` (core stack)
+- `make config-falkor` (FalkorDB + MCP)
+- `make up-main`, `make down-main`
+- `make up-falkordb`, `make up-falkordb-mcp`, `make down-falkor`
+- `make ps-main`, `make ps-falkor`, `make ps-all`
+
+FalkorDB MCP runtime env defaults:
+
+- `MCP_TRANSPORT=http`
+- `FALKORDB_MCP_PORT=3005` (host port mapped to container port `3000`)
+- `MCP_API_KEY` optional (recommended for HTTP mode)
 
 
 ## Usage - client

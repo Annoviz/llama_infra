@@ -1,5 +1,41 @@
 # Docker Image Update Changelog - March 26, 2026
 
+## FalkorDB MCP + Split Compose Update - June 8, 2026
+
+### Added
+
+- Added split main-stack compose files under `compose/main/`:
+  - `00-networks-and-volumes.yml`
+  - `10-ollama.yml`
+  - `20-anythingllm.yml`
+  - `30-open-webui.yml`
+  - `40-falkordb.yml`
+  - `50-falkordb-mcp.yml`
+- Added local FalkorDB service (`falkordb/falkordb`) with persistence (`falkordb-data`) and healthcheck.
+- Added FalkorDB MCP service (`falkordb/mcpserver`) configured in HTTP transport mode.
+
+### Changed
+
+- Refactored `Makefile` compose orchestration to combine per-component files instead of relying on a single monolithic main compose file.
+- Removed obsolete top-level `docker-compose.yml` after migrating all active workflows to split compose files and Make targets.
+- Added Falkor-specific lifecycle targets:
+  - `config-falkor`, `pull-falkor`
+  - `up-falkordb`, `up-falkordb-mcp`, `up-main-all`
+  - `down-falkor`
+  - `restart-falkordb`, `restart-falkordb-mcp`
+  - `logs-falkordb`, `logs-falkordb-mcp`
+  - `ps-falkor`
+- Updated `README.md` with FalkorDB and FalkorDB MCP usage and split-compose layout guidance.
+
+### Defaults
+
+- FalkorDB server: `localhost:6379` (DB), `localhost:3000` (browser)
+- FalkorDB MCP HTTP endpoint: `localhost:3005` -> container `3000`
+
+### Notes
+
+- Request text referenced "falcordb"; implementation uses official FalkorDB images and naming (`falkordb/*`).
+
 ## Summary of Updates
 This document outlines the Docker image and developer-experience updates applied to the `llama_infra` project, including version changes, build fixes, utility commands, and compatibility notes verified against upstream release/tag metadata on 2026-03-26.
 
@@ -39,7 +75,7 @@ This document outlines the Docker image and developer-experience updates applied
 ## Build and workflow improvements
 
 - Added a top-level `Makefile` with utility commands for each service and stack
-- Fixed `Dockerfile.llamacpp-server-python` to default to the versioned requirements file that actually exists: `requirements-llama_cpp_python-0.3.19.txt`
+- Fixed `compose/llama/Dockerfile.llamacpp-server-python` to default to the versioned requirements file that actually exists: `requirements-llama_cpp_python-0.3.19.txt`
 - Added `REQUIREMENTS_FILE` as an explicit env-overridable build arg in `docker-compose.llama.cpp.yml`
 - Updated `README.md` to document strict pins, override variables, GPU checks, and Make-based workflows
 - Replaced the legacy `requirements-llama_cpp_python-0.3.7.txt` file with `requirements-llama_cpp_python-0.3.19.txt`
@@ -87,7 +123,7 @@ Update run (May 15, 2026):
 - Applied version bumps from the update workflow in the tracked defaults.
 - `ollama/ollama:${OLLAMA_VERSION:-0.18.3}` -> `ollama/ollama:${OLLAMA_VERSION:-0.24.0}` in `docker-compose.yml`.
 - `mintplexlabs/anythingllm:${ANYTHINGLLM_VERSION:-1.11.2}` -> `mintplexlabs/anythingllm:${ANYTHINGLLM_VERSION:-1.12.1}` in `docker-compose.yml`.
-- `LLAMA_CPP_VERSION` default `0.3.19` -> `0.3.23` in `docker-compose.llama.cpp.yml` and `Dockerfile.llamacpp-server-python`.
+- `LLAMA_CPP_VERSION` default `0.3.19` -> `0.3.23` in `docker-compose.llama.cpp.yml` and `compose/llama/Dockerfile.llamacpp-server-python`.
 - Updated llama-cpp server support package minimums in `requirements-dev.txt`:
   - `diskcache>=5.6.1` -> `diskcache>=5.6.3`
   - `uvicorn>=0.22.0` -> `uvicorn>=0.47.0`

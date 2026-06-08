@@ -26,9 +26,11 @@ from urllib import error, parse, request
 ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_PROPOSAL = ROOT / ".update-manager-proposal.json"
 
-DOCKER_COMPOSE_MAIN = ROOT / "docker-compose.yml"
+DOCKER_COMPOSE_OLLAMA = ROOT / "compose/main/10-ollama.yml"
+DOCKER_COMPOSE_ANYTHING = ROOT / "compose/main/20-anythingllm.yml"
+DOCKER_COMPOSE_OPENWEBUI = ROOT / "compose/main/30-open-webui.yml"
 DOCKER_COMPOSE_LLAMA = ROOT / "docker-compose.llama.cpp.yml"
-DOCKERFILE_LLAMA_PY = ROOT / "Dockerfile.llamacpp-server-python"
+DOCKERFILE_LLAMA_PY = ROOT / "compose/llama/Dockerfile.llamacpp-server-python"
 REQ_DEV = ROOT / "requirements-dev.txt"
 REQ_FROZEN = ROOT / "workspace/requirements.txt"
 
@@ -147,12 +149,14 @@ def parse_requirements_line(
 def discover_docker_updates() -> List[UpdateItem]:
     items: List[UpdateItem] = []
 
-    main_text = DOCKER_COMPOSE_MAIN.read_text(encoding="utf-8")
+    ollama_text = DOCKER_COMPOSE_OLLAMA.read_text(encoding="utf-8")
+    anything_text = DOCKER_COMPOSE_ANYTHING.read_text(encoding="utf-8")
+    openwebui_text = DOCKER_COMPOSE_OPENWEBUI.read_text(encoding="utf-8")
     llama_text = DOCKER_COMPOSE_LLAMA.read_text(encoding="utf-8")
 
-    current_ollama = re.search(r"\$\{OLLAMA_VERSION:-([^}]+)\}", main_text)
-    current_anything = re.search(r"\$\{ANYTHINGLLM_VERSION:-([^}]+)\}", main_text)
-    current_openwebui = re.search(r"\$\{OW_VERSION:-([^}]+)\}", main_text)
+    current_ollama = re.search(r"\$\{OLLAMA_VERSION:-([^}]+)\}", ollama_text)
+    current_anything = re.search(r"\$\{ANYTHINGLLM_VERSION:-([^}]+)\}", anything_text)
+    current_openwebui = re.search(r"\$\{OW_VERSION:-([^}]+)\}", openwebui_text)
     current_llama_image = re.search(
         r"\$\{IMAGE:-ghcr\.io/ggml-org/llama\.cpp:([^}]+)\}", llama_text
     )
@@ -168,7 +172,7 @@ def discover_docker_updates() -> List[UpdateItem]:
                 UpdateItem(
                     kind="docker",
                     name="ollama/ollama",
-                    source_file=DOCKER_COMPOSE_MAIN,
+                    source_file=DOCKER_COMPOSE_OLLAMA,
                     current=current_ollama.group(1),
                     latest=latest,
                     applyable=is_newer(latest, current_ollama.group(1)),
@@ -188,7 +192,7 @@ def discover_docker_updates() -> List[UpdateItem]:
                 UpdateItem(
                     kind="docker",
                     name="mintplexlabs/anythingllm",
-                    source_file=DOCKER_COMPOSE_MAIN,
+                    source_file=DOCKER_COMPOSE_ANYTHING,
                     current=current_anything.group(1),
                     latest=latest,
                     applyable=is_newer(latest, current_anything.group(1)),
@@ -208,7 +212,7 @@ def discover_docker_updates() -> List[UpdateItem]:
                 UpdateItem(
                     kind="docker",
                     name="ghcr.io/open-webui/open-webui",
-                    source_file=DOCKER_COMPOSE_MAIN,
+                    source_file=DOCKER_COMPOSE_OPENWEBUI,
                     current=current_openwebui.group(1),
                     latest=latest,
                     applyable=is_newer(latest, current_openwebui.group(1)),
@@ -319,7 +323,7 @@ def build_replacements(items: Sequence[UpdateItem]) -> List[Replacement]:
         if item.name == "ollama/ollama":
             replacements.append(
                 Replacement(
-                    source_file=DOCKER_COMPOSE_MAIN,
+                    source_file=DOCKER_COMPOSE_OLLAMA,
                     old=r"${OLLAMA_VERSION:-" + item.current + "}",
                     new=r"${OLLAMA_VERSION:-" + item.latest + "}",
                 )
@@ -327,7 +331,7 @@ def build_replacements(items: Sequence[UpdateItem]) -> List[Replacement]:
         elif item.name == "mintplexlabs/anythingllm":
             replacements.append(
                 Replacement(
-                    source_file=DOCKER_COMPOSE_MAIN,
+                    source_file=DOCKER_COMPOSE_ANYTHING,
                     old=r"${ANYTHINGLLM_VERSION:-" + item.current + "}",
                     new=r"${ANYTHINGLLM_VERSION:-" + item.latest + "}",
                 )
@@ -335,7 +339,7 @@ def build_replacements(items: Sequence[UpdateItem]) -> List[Replacement]:
         elif item.name == "ghcr.io/open-webui/open-webui":
             replacements.append(
                 Replacement(
-                    source_file=DOCKER_COMPOSE_MAIN,
+                    source_file=DOCKER_COMPOSE_OPENWEBUI,
                     old=r"${OW_VERSION:-" + item.current + "}",
                     new=r"${OW_VERSION:-" + item.latest + "}",
                 )

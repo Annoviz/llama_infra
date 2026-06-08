@@ -4,7 +4,10 @@
 
 ## Managed targets
 
-- Docker defaults in `docker-compose.yml`
+- Docker defaults in split main compose files
+  - `compose/main/10-ollama.yml`
+  - `compose/main/20-anythingllm.yml`
+  - `compose/main/30-open-webui.yml`
   - `OLLAMA_VERSION`
   - `ANYTHINGLLM_VERSION`
   - `OW_VERSION`
@@ -12,7 +15,7 @@
   - `IMAGE` (`ghcr.io/ggml-org/llama.cpp:full-cuda-b*`)
   - `BASE_IMAGE`
   - `LLAMA_CPP_VERSION`
-- Dockerfile defaults in `Dockerfile.llamacpp-server-python`
+- Dockerfile defaults in `compose/llama/Dockerfile.llamacpp-server-python`
   - `ARG BASE_IMAGE`
   - `ARG LLAMA_CPP_VERSION`
 - Python package constraints in `requirements-dev.txt`

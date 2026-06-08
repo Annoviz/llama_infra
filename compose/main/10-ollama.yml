@@ -1,0 +1,34 @@
+services:
+  ollama-server:
+    image: ollama/ollama:${OLLAMA_VERSION:-0.30.6}
+    container_name: ollama-server
+    shm_size: '16gb'
+#    entrypoint: ["/bin/sh", "/app/scripts/entrypoint.ollama.sh"]
+    ulimits:
+      memlock: -1
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              device_ids: ["${GPU_ID:-0}"]
+              capabilities: [gpu]
+    ports:
+      - 11434:11434
+    volumes:
+      - ${MODELS:-./models}:/models
+      - ./workspace:/app/workspace
+      - ./scripts/entrypoint.ollama.sh:/app/scripts/entrypoint.ollama.sh:ro
+    networks:
+      - ollama-bridge
+    restart: always
+    environment:
+      OLLAMA_MODELS: /models
+      OLLAMA_KV_CACHE_TYPE: q8_0 # can be: f16, q8_0, q4_0
+      OLLAMA_FLASH_ATTENTION: 1
+      OLLAMA_MAX_LOADED_MODELS: 3 # Planner, Codder, Fast-Codder
+      OLLAMA_NUM_PARALLEL: 4
+      OLLAMA_KEEP_ALIVE: 24h
+    # dns:
+    #   - 8.8.8.8      # Google Primary Public DNS
+    #   - 1.1.1.1      # Cloudflare Secondary Public DNS

@@ -1,0 +1,18 @@
+services:
+  falkordb:
+    image: falkordb/falkordb:${FALKORDB_VERSION:-v4.18.9}
+    container_name: falkordb
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+      - "3000:3000"
+    volumes:
+      - falkordb-data:/data
+    networks:
+      - falkordb-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s

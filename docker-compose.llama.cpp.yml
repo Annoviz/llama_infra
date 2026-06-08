@@ -33,7 +33,7 @@ services:
     build:
         network: host
         context: .
-        dockerfile: Dockerfile.llamacpp-server-python
+        dockerfile: compose/llama/Dockerfile.llamacpp-server-python
         args:
           BASE_IMAGE: ${BASE_IMAGE:-ghcr.io/ggml-org/llama.cpp:full-cuda-b5350}
           LLAMA_CPP_VERSION: ${LLAMA_CPP_VERSION:-0.3.23}

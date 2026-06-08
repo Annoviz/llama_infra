@@ -10,7 +10,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Two independent Docker stacks:
 
-1. **Main stack** (`docker-compose.yml`): `ollama-server` + `anythingllm` + `open-webui`
+1. **Main stack** (`compose/main/*.yml`, assembled via `Makefile`): `ollama-server` + `anythingllm` + `open-webui` (+ optional FalkorDB MCP services)
 2. **llama.cpp stack** (`docker-compose.llama.cpp.yml`): native C++ server + Python server
 
 These stacks are intentionally separate; do not assume cross-stack compatibility.

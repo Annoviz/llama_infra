@@ -9,7 +9,7 @@ Detailed, task-specific guidance is delegated to Markdown subagents in
 
 Two independent Docker stacks are supported:
 
-1. Main stack (`docker-compose.yml`): Ollama + AnythingLLM + Open WebUI
+1. Main stack (`compose/main/*.yml`, assembled via `Makefile`): Ollama + AnythingLLM + Open WebUI (+ optional FalkorDB MCP services)
 2. llama.cpp stack (`docker-compose.llama.cpp.yml`): native C++ server + Python server
 
 These stacks are intentionally separate; do not assume cross-stack compatibility.
