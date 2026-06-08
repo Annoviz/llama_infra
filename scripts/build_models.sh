@@ -14,6 +14,10 @@ docker compose -f "$LLAMA_INFRA_DIR/docker-compose.yml" \
   exec -T ollama-server ollama create coder \
   -f "/app/workspace/models/Coder.Modelfile"
 
+docker compose -f "$LLAMA_INFRA_DIR/docker-compose.yml" \
+  exec -T ollama-server ollama create fast-codder \
+  -f "/app/workspace/models/FastCodder.Modelfile"
+
 echo ""
 echo "✅ Done. Registered models:"
 docker compose -f "$LLAMA_INFRA_DIR/docker-compose.yml" \

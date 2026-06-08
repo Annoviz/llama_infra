@@ -62,7 +62,7 @@ Return structured implementation steps.
 Create `workspace/models/Coder.Modelfile`:
 
 ```dockerfile
-FROM qwen2.5-coder:14b
+FROM qwen3.6:27b
 PARAMETER num_ctx 32768
 PARAMETER temperature 0.3
 PARAMETER keep_alive 24h

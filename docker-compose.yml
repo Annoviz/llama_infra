@@ -19,6 +19,8 @@ services:
       - ${MODELS:-./models}:/models
       - ./workspace:/app/workspace
       - ./scripts/entrypoint.ollama.sh:/app/scripts/entrypoint.ollama.sh:ro
+    networks:
+      - ollama-bridge
     restart: always
     environment:
       OLLAMA_MODELS: /models
@@ -27,9 +29,9 @@ services:
       OLLAMA_MAX_LOADED_MODELS: 2
       OLLAMA_NUM_PARALLEL: 4
       OLLAMA_KEEP_ALIVE: 24h
-    dns:
-      - 8.8.8.8      # Google Primary Public DNS
-      - 1.1.1.1      # Cloudflare Secondary Public DNS
+    # dns:
+    #   - 8.8.8.8      # Google Primary Public DNS
+    #   - 1.1.1.1      # Cloudflare Secondary Public DNS
 
   anythingllm:
     image: mintplexlabs/anythingllm:${ANYTHINGLLM_VERSION:-1.12.1}
@@ -58,6 +60,8 @@ services:
       # Add any other keys here for services or settings
     volumes:
       - ${DATA_DIR:-./data}/anythingllm_storage:/app/server/storage
+    networks:
+      - ollama-bridge
     restart: always
     depends_on:
       - ollama-server
@@ -76,6 +80,12 @@ services:
       # Add any other keys here for services or settings
     volumes:
       - ${DATA_DIR:-./data}/open-webui:/app/backend/data
+    networks:
+      - ollama-bridge
     restart: always
     depends_on:
       - ollama-server
+
+networks:
+  ollama-bridge:
+    driver: bridge
