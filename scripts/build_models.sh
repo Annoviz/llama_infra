@@ -21,8 +21,8 @@ echo "🔧 Building model aliases from $LLAMA_INFRA_DIR/workspace/models/ ..."
   -f "/app/workspace/models/Coder.Modelfile"
 
 "${COMPOSE[@]}" \
-  exec -T ollama-server ollama create fast-codder \
-  -f "/app/workspace/models/FastCodder.Modelfile"
+  exec -T ollama-server ollama create fast-coder \
+  -f "/app/workspace/models/FastCoder.Modelfile"
 
 echo ""
 echo "✅ Done. Registered models:"

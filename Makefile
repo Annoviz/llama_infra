@@ -10,6 +10,9 @@ COMPOSE_CORE := docker compose --project-directory $(CURDIR) \
 	-f compose/main/10-ollama.yml \
 	-f compose/main/20-anythingllm.yml \
 	-f compose/main/30-open-webui.yml
+COMPOSE_OLLAMA := docker compose --project-directory $(CURDIR) \
+	-f compose/main/00-networks-and-volumes.yml \
+	-f compose/main/10-ollama.yml
 COMPOSE_FALKOR := docker compose --project-directory $(CURDIR) \
 	-f compose/main/00-networks-and-volumes.yml \
 	-f compose/main/40-falkordb.yml \
@@ -138,7 +141,7 @@ precommit-update:
 	pre-commit autoupdate
 
 up-ollama:
-	$(COMPOSE_CORE) up -d ollama-server
+	@docker start ollama-server >/dev/null 2>&1 || $(COMPOSE_OLLAMA) up -d --no-deps ollama-server
 
 up-anythingllm:
 	$(COMPOSE_CORE) up -d anythingllm

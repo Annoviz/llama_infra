@@ -3,9 +3,5 @@ PARAMETER num_gpu 99
 PARAMETER num_ctx 65536
 PARAMETER temperature 0.1
 
-SYSTEM """
-You are the planning agent.
-Analyze architecture, dependencies, and risks.
-Return structured implementation steps.
-"""
+# DO NOT ADD A SYSTEM PROMPT HERE. Let Claude Code supply its agent framework instructions natively.
 

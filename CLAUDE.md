@@ -87,6 +87,16 @@ Subagents live in `.github/agents/*.md`. Routing rules (keyword scoring, tie-bre
 
 When routing rules or subagent docs change, run `make verify-agent-routing` before handoff.
 
+## Memory System
+
+Claude Code session memories are stored in the `llama_infra_memory` FalkorDB graph (MCP server at `http://localhost:3005`). File-based memory (`~/.claude/projects/*/memory/`) is deprecated.
+
+To query memories:
+```cypher
+MATCH (m:Memory) RETURN m.name, m.type, m.description
+MATCH (m:Memory)-[:RELATED_TO]->(t:Topic) RETURN m, t
+```
+
 ## Development Notes
 
 - Use `make` targets instead of raw `docker compose` commands when a target exists.

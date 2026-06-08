@@ -5,8 +5,5 @@ PARAMETER num_gpu 99
 PARAMETER num_ctx 32768
 PARAMETER temperature 0.3
 
-SYSTEM """
-You are the coding agent.
-Implement requested changes precisely and safely.
-"""
+# DO NOT ADD A SYSTEM PROMPT HERE. Let Claude Code supply its agent framework instructions natively.
 
