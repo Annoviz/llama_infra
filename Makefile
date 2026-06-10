@@ -17,29 +17,34 @@ COMPOSE_FALKOR := docker compose --project-directory $(CURDIR) \
 	-f compose/main/00-networks-and-volumes.yml \
 	-f compose/main/40-falkordb.yml \
 	-f compose/main/50-falkordb-mcp.yml
+COMPOSE_UNSLOTH := docker compose --project-directory $(CURDIR) \
+	-f compose/main/00-networks-and-volumes.yml \
+	-f compose/main/60-unsloth.yml
 COMPOSE_MAIN := docker compose --project-directory $(CURDIR) \
 	-f compose/main/00-networks-and-volumes.yml \
 	-f compose/main/10-ollama.yml \
 	-f compose/main/20-anythingllm.yml \
 	-f compose/main/30-open-webui.yml \
 	-f compose/main/40-falkordb.yml \
-	-f compose/main/50-falkordb-mcp.yml
+	-f compose/main/50-falkordb-mcp.yml \
+	-f compose/main/60-unsloth.yml
 COMPOSE_LLAMA := docker compose --project-directory $(CURDIR) -f docker-compose.llama.cpp.yml
 LLAMA_CPP_IMAGE ?= ghcr.io/ggml-org/llama.cpp:full-cuda-b5350
 
 .PHONY: help \
 	config-main config-falkor config-llama config-all \
-	pull-main pull-falkor pull-llama pull-all \
+	config-unsloth \
+	pull-main pull-falkor pull-unsloth pull-llama pull-all \
 	build-llamacpp-py models-sync \
 	updates-check updates-suggest updates-apply \
-	check-agent-docs verify-agent-routing \
+	check-agent-docs verify-agent-routing check-doc-links \
 	precommit-install precommit-run precommit-update \
-	up-ollama up-anythingllm up-open-webui up-main up-falkordb up-falkordb-mcp up-main-all \
+	up-ollama up-anythingllm up-open-webui up-main up-falkordb up-falkordb-mcp up-unsloth up-main-all \
 	up-llamacpp up-llamacpp-py up-llama \
-	down-main down-falkor down-llama down-all \
-	restart-ollama restart-anythingllm restart-open-webui restart-falkordb restart-falkordb-mcp restart-llamacpp restart-llamacpp-py \
-	logs-ollama logs-anythingllm logs-open-webui logs-falkordb logs-falkordb-mcp logs-llamacpp logs-llamacpp-py \
-	ps-main ps-falkor ps-llama ps-all \
+	down-main down-falkor down-unsloth down-llama down-all \
+	restart-ollama restart-anythingllm restart-open-webui restart-falkordb restart-falkordb-mcp restart-unsloth restart-llamacpp restart-llamacpp-py \
+	logs-ollama logs-anythingllm logs-open-webui logs-falkordb logs-falkordb-mcp logs-unsloth logs-llamacpp logs-llamacpp-py \
+	ps-main ps-falkor ps-unsloth ps-llama ps-all \
 	gpu-host gpu-smoke-llamacpp clean
 
 help:
@@ -51,9 +56,11 @@ help:
 	@printf "  make up-main             # Start Ollama + AnythingLLM + Open WebUI\n"
 	@printf "  make up-falkordb         # Start local FalkorDB service\n"
 	@printf "  make up-falkordb-mcp     # Start FalkorDB MCP server (depends on FalkorDB)\n"
+	@printf "  make up-unsloth          # Start Unsloth container (GPU + Jupyter/API)\n"
 	@printf "  make up-main-all         # Start core stack + FalkorDB + FalkorDB MCP\n"
 	@printf "  make down-main           # Stop the main stack\n"
 	@printf "  make down-falkor         # Stop FalkorDB + MCP stack\n"
+	@printf "  make down-unsloth        # Stop Unsloth stack\n"
 	@printf "\nllama.cpp stack:\n"
 	@printf "  make up-llamacpp         # Start the native llama.cpp server\n"
 	@printf "  make build-llamacpp-py   # Build the python llama-cpp server image\n"
@@ -62,6 +69,7 @@ help:
 	@printf "\nDiagnostics:\n"
 	@printf "  make config-all          # Render both compose files\n"
 	@printf "  make pull-all            # Pull all pinned images\n"
+	@printf "  make ps-unsloth          # Show Unsloth container status\n"
 	@printf "  make models-sync         # Sync models from workspace/models/models-config.yaml inside ollama-server\n"
 	@printf "  make ps-all              # Show running containers in both stacks\n"
 	@printf "  make gpu-host            # Show host NVIDIA status\n"
@@ -73,11 +81,13 @@ help:
 	@printf "\nCode quality:\n"
 	@printf "  make check-agent-docs    # Validate required headings in .github/agents/*.md\n"
 	@printf "  make verify-agent-routing # Run agent docs checker + unit tests\n"
+	@printf "  make check-doc-links     # Verify all local markdown links in README and docs/ resolve\n"
 	@printf "  make precommit-install   # Install pre-commit git hooks\n"
 	@printf "  make precommit-run       # Run all pre-commit hooks on all files\n"
 	@printf "  make precommit-update    # Update pinned hook revisions in .pre-commit-config.yaml\n"
 	@printf "\nOverride examples:\n"
 	@printf "  OLLAMA_VERSION=0.18.2 make config-main\n"
+	@printf "  UNSLOTH_VERSION=2026.5.9-pt2.10.0-vllm-0.16.0-cu12.8-studio-release-v0.1.43-beta-2026-MAY-31 make pull-unsloth\n"
 	@printf "  IMAGE=ghcr.io/ggml-org/llama.cpp:full-cuda-b5343 make config-llama\n"
 	@printf "  LLAMA_CPP_VERSION=0.3.18 REQUIREMENTS_FILE=requirements-dev.txt make build-llamacpp-py\n\n"
 	@{ \
@@ -94,10 +104,13 @@ config-main:
 config-falkor:
 	$(COMPOSE_FALKOR) config
 
+config-unsloth:
+	$(COMPOSE_UNSLOTH) config
+
 config-llama:
 	$(COMPOSE_LLAMA) config
 
-config-all: config-main config-falkor config-llama
+config-all: config-main config-falkor config-unsloth config-llama
 
 pull-main:
 	$(COMPOSE_CORE) pull
@@ -105,10 +118,13 @@ pull-main:
 pull-falkor:
 	$(COMPOSE_FALKOR) pull
 
+pull-unsloth:
+	$(COMPOSE_UNSLOTH) pull
+
 pull-llama:
 	$(COMPOSE_LLAMA) pull llamacpp-server
 
-pull-all: pull-main pull-falkor pull-llama
+pull-all: pull-main pull-falkor pull-unsloth pull-llama
 
 build-llamacpp-py:
 	$(COMPOSE_LLAMA) build llamacpp-server-py
@@ -130,6 +146,9 @@ check-agent-docs:
 
 verify-agent-routing: check-agent-docs
 	python3 -m pytest -q tests/test_agent_docs_check.py
+
+check-doc-links:
+	python3 tools/check_doc_links.py
 
 precommit-install:
 	pre-commit install
@@ -158,8 +177,11 @@ up-falkordb:
 up-falkordb-mcp:
 	$(COMPOSE_FALKOR) up -d falkordb-mcpserver
 
+up-unsloth:
+	$(COMPOSE_UNSLOTH) up -d unsloth-server
+
 up-main-all:
-	$(COMPOSE_MAIN) up -d ollama-server anythingllm open-webui falkordb falkordb-mcpserver
+	$(COMPOSE_MAIN) up -d ollama-server anythingllm open-webui falkordb falkordb-mcpserver unsloth-server
 
 up-llamacpp:
 	$(COMPOSE_LLAMA) up -d llamacpp-server
@@ -175,6 +197,9 @@ down-main:
 
 down-falkor:
 	$(COMPOSE_FALKOR) down
+
+down-unsloth:
+	$(COMPOSE_UNSLOTH) down
 
 down-llama:
 	$(COMPOSE_LLAMA) down
@@ -195,6 +220,9 @@ restart-falkordb:
 
 restart-falkordb-mcp:
 	$(COMPOSE_FALKOR) restart falkordb-mcpserver
+
+restart-unsloth:
+	$(COMPOSE_UNSLOTH) restart unsloth-server
 
 restart-llamacpp:
 	$(COMPOSE_LLAMA) restart llamacpp-server
@@ -217,6 +245,9 @@ logs-falkordb:
 logs-falkordb-mcp:
 	$(COMPOSE_FALKOR) logs -f --tail=200 falkordb-mcpserver
 
+logs-unsloth:
+	$(COMPOSE_UNSLOTH) logs -f --tail=200 unsloth-server
+
 logs-llamacpp:
 	$(COMPOSE_LLAMA) logs -f --tail=200 llamacpp-server
 
@@ -229,10 +260,13 @@ ps-main:
 ps-falkor:
 	$(COMPOSE_FALKOR) ps
 
+ps-unsloth:
+	$(COMPOSE_UNSLOTH) ps
+
 ps-llama:
 	$(COMPOSE_LLAMA) ps
 
-ps-all: ps-main ps-falkor ps-llama
+ps-all: ps-main ps-falkor ps-unsloth ps-llama
 
 gpu-host:
 	nvidia-smi

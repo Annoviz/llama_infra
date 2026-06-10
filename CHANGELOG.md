@@ -1,5 +1,34 @@
 # Docker Image Update Changelog - March 26, 2026
 
+## Unsloth Optional Service - June 10, 2026
+
+### Added
+
+- Added optional Unsloth compose service at `compose/main/60-unsloth.yml`.
+- Added Unsloth Make lifecycle targets:
+  - `config-unsloth`, `pull-unsloth`
+  - `up-unsloth`, `down-unsloth`
+  - `restart-unsloth`, `logs-unsloth`, `ps-unsloth`
+
+### Changed
+
+- Added Unsloth compose fragment to `COMPOSE_MAIN` and `up-main-all` so full-stack startup includes Unsloth.
+- Expanded `config-all`, `pull-all`, and `ps-all` to include Unsloth workflow commands.
+- Updated `README.md` with Unsloth usage, compose layout entry, and default env settings.
+
+### Defaults
+
+- Unsloth image pinned to:
+  - `unsloth/unsloth:2026.5.9-pt2.10.0-vllm-0.16.0-cu12.8-studio-release-v0.1.43-beta-2026-MAY-31`
+- Host ports:
+  - Jupyter: `localhost:8888`
+  - API: `localhost:8000`
+
+### Notes
+
+- Service remains optional and does not change `make up-main` behavior.
+- GPU access is configured via Docker Compose device capabilities (`capabilities: [gpu]`).
+
 ## FalkorDB MCP + Split Compose Update - June 8, 2026
 
 ### Added

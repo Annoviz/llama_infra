@@ -1,0 +1,24 @@
+services:
+  unsloth-server:
+    image: unsloth/unsloth:${UNSLOTH_VERSION:-2026.5.9-pt2.10.0-vllm-0.16.0-cu12.8-studio-release-v0.1.43-beta-2026-MAY-31}
+    container_name: unsloth-server
+    shm_size: "16gb"
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              device_ids: ["${GPU_ID:-0}"]
+              capabilities: [gpu]
+    ports:
+      - ${UNSLOTH_JUPYTER_PORT:-8888}:8888
+      - ${UNSLOTH_API_PORT:-8000}:8000
+    volumes:
+      - ${DATA_DIR:-./data}/unsloth/work:/workspace/work
+      - ./workspace:/workspace/project
+    networks:
+      - ollama-bridge
+    restart: always
+    environment:
+      JUPYTER_PORT: 8888
+      JUPYTER_PASSWORD: ${UNSLOTH_JUPYTER_PASSWORD:-change-me}

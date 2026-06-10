@@ -16,198 +16,27 @@
 
 
 
-## Usage - server
-```
-# ollama-server
-make up-ollama
+## Service docs
 
-# anythingllm - https://github.com/Mintplex-Labs/anything-llm
-make up-anythingllm
+Main stack:
 
-# ollama-server + anythingllm = localhost:3001
-make up-anythingllm
+- Ollama: [docs/services/ollama.md](docs/services/ollama.md)
+- AnythingLLM: [docs/services/anythingllm.md](docs/services/anythingllm.md)
+- Open WebUI: [docs/services/open-webui.md](docs/services/open-webui.md)
+- FalkorDB: [docs/services/falkordb.md](docs/services/falkordb.md)
+- FalkorDB MCP: [docs/services/falkordb-mcp.md](docs/services/falkordb-mcp.md)
+- Unsloth: [docs/services/unsloth.md](docs/services/unsloth.md)
 
-# ollama-server + open-webui = localhost:3002
-make up-open-webui
+llama.cpp stack:
 
-# FalkorDB local graph database = localhost:6379, browser = localhost:3000
-make up-falkordb
+- llama.cpp services: [docs/services/llama-cpp.md](docs/services/llama-cpp.md)
 
-# FalkorDB MCP server (HTTP transport) = localhost:3005
-make up-falkordb-mcp
+General stack orchestration:
 
-# Start all core services + FalkorDB + FalkorDB MCP
-make up-main-all
-
-```
-
-## Compose layout (split by component)
-
-Main stack compose files are split under `compose/main/` and combined by `Makefile` targets:
-
-- `00-networks-and-volumes.yml`
-- `10-ollama.yml`
-- `20-anythingllm.yml`
-- `30-open-webui.yml`
-- `40-falkordb.yml`
-- `50-falkordb-mcp.yml`
-
-Useful targets:
-
-- `make config-main` (core stack)
-- `make config-falkor` (FalkorDB + MCP)
-- `make up-main`, `make down-main`
-- `make up-falkordb`, `make up-falkordb-mcp`, `make down-falkor`
-- `make ps-main`, `make ps-falkor`, `make ps-all`
-
-FalkorDB MCP runtime env defaults:
-
-- `MCP_TRANSPORT=http`
-- `FALKORDB_MCP_PORT=3005` (host port mapped to container port `3000`)
-- `MCP_API_KEY` optional (recommended for HTTP mode)
-
-
-## Usage - client
-```
-# install mini conda
-wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh
-chmod +x Miniconda3-latest-Linux-x86_64.sh
-./Miniconda3-latest-Linux-x86_64.sh
-
-# create a new conda environment
-conda create -n llama_infra python=3.10
-
-# activate the conda environment
-conda activate llama_infra
-
-# install the client requirements
-pip install -r requirements-client.txt
-
-# run the client examples with jupyter: workspace/ollama_examples.ipynb
-jupyter notebook
-
-```
-
-## Usage - extra
-```
-
-# Run the lamma.cpp server - WIP
-make up-llamacpp
-
-# Sync models inside the ollama-server container
-make models-sync
-
-# Download the models - Qwen2.5-VL-7B-Instruct (Not supported by the server yet)
-mkdir -p models/Qwen2.5-VL-7B-Instruct
-cd models/Qwen2.5-VL-7B-Instruct
-wget https://huggingface.co/IAILabs/Qwen2.5-VL-7B-Instruct-GGUF/resolve/main/README.md
-wget https://huggingface.co/IAILabs/Qwen2.5-VL-7B-Instruct-GGUF/resolve/main/Qwen2.5-VL-7B-Instruct-Q4_0.gguf
-wget https://huggingface.co/IAILabs/Qwen2.5-VL-7B-Instruct-GGUF/resolve/main/mmproj-Qwen2.5-VL-7B-Instruct-F32.gguf
-cd ../..
-
-# Build the python server
-make build-llamacpp-py
-
-# Run the python server
-make up-llamacpp-py
-```
-
-## Local Claude Code playbook
-
-- Repo-aligned setup guide: `CLAUDE_CODE_LOCAL.md`
-- Uses Makefile-first commands for Ollama lifecycle (`make up-ollama`, `make logs-ollama`, `make ps-main`)
-- Covers model alias creation (`planner`, `coder`), shell routing aliases, and local benchmarking
-
-## Model config locations
-
-- Llama.cpp JSON server configs: `workspace/models/*.json`
-- Model sync contract: `workspace/models/models-config.yaml`
-- `LLM_CONFIG` is resolved as `/app/workspace/models/${LLM_CONFIG}` in `scripts/entrypoint.llamacpp.sh`
-- Ollama startup and sync entrypoint: `scripts/entrypoint.ollama.sh`
-
-## Update manager (Docker tags + Python packages)
-```bash
-# Check current vs latest (no file writes)
-make updates-check
-
-# Check and save proposal file (.update-manager-proposal.json)
-make updates-suggest
-
-# Show patch and apply only after interactive y/yes confirmation
-make updates-apply
-```
-
-- Editable dependency source: `requirements-dev.txt`
-- Frozen snapshot (never edited by update manager): `workspace/requirements.txt`
-
-## Code quality (pre-commit)
-```bash
-# install dev tooling
-pip install -r requirements-dev.txt
-
-# install git pre-commit hook
-make precommit-install
-
-# run all hooks manually
-make precommit-run
-
-# run focused agent routing verification
-make verify-agent-routing
-
-# refresh pinned hook revisions
-make precommit-update
-```
-
-## Copilot subagents
-
-This repo supports simple Markdown-based subagent discovery via `.github/agents/*.md`.
-
-Available subagents:
-
-- `docker-ops-agent` -> stack lifecycle, logs, GPU checks
-- `model-config-agent` -> `workspace/models/*.json`, `LLM_CONFIG`, GGUF/mmproj wiring
-- `update-manager-agent` -> `tools/update_manager.py`, managed version/dependency updates
-- `docs-sync-agent` -> `README.md` and `CHANGELOG.md` synchronization
-- `coding-agent` -> implementation, refactors, bug fixes, and test updates
-- `reviewer-agent` -> review findings, regressions, and missing-test analysis
-- `commit-agent` -> stage, commit, and push workflows with status reporting
-
-Routing modes:
-
-- Manual routing: explicitly name a subagent in your prompt
-- Proactive routing: infer subagent from task intent/keywords
-- Strict proactive mode: use keyword scoring in `AGENTS.md` to pick the highest-confidence match
-
-Validate subagent docs structure locally:
-
-```bash
-make check-agent-docs
-make verify-agent-routing
-```
-
-Routing smoke examples are documented in `.github/agents/routing-smoke.md`.
-They include positive routing examples and negative "avoid route" cases per execution subagent.
-
-Manual examples:
-
-```text
-Use update-manager-agent to run the update proposal flow.
-Route this to model-config-agent and add a new config for a multimodal model.
-```
-
-Proactive examples:
-
-```text
-AnythingLLM is not starting, check logs and fix startup.
-Add a new qwen config with model_alias and mmproj path.
-Check for newer Docker tags and apply safe updates.
-```
-
-Fallback behavior:
-
-- If intent is ambiguous, the orchestrator asks one short clarification question.
-- If no confident match exists, the orchestrator handles the task directly.
-- If work spans domains, the orchestrator can sequence multiple subagents.
+- Top-level commands and shortcuts: [Makefile](Makefile) (`make help`)
+- Version pinning and update workflow: [docs/versioning.md](docs/versioning.md)
+- Operations guide (client setup, extra workflows, model config, update manager, code quality): [docs/operations.md](docs/operations.md)
+- Copilot subagents and routing guide: [AGENTS.md](AGENTS.md)
 
 # Contact
 * Author: Dima Kanevsky

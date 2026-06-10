@@ -1,0 +1,30 @@
+name: Doc Link Check
+
+on:
+  pull_request:
+    paths:
+      - "README.md"
+      - "docs/**"
+      - "tools/check_doc_links.py"
+      - ".github/workflows/doc-links-check.yml"
+  push:
+    paths:
+      - "README.md"
+      - "docs/**"
+      - "tools/check_doc_links.py"
+      - ".github/workflows/doc-links-check.yml"
+
+jobs:
+  check-doc-links:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+
+      - name: Verify all local doc links resolve
+        run: make check-doc-links
