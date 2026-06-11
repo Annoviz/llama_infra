@@ -1,8 +1,8 @@
-FROM qwen3.6:27b
+FROM qwen3-coder:30b
 
 # Target Configuration for Low-latency High-throughput Generation
 PARAMETER num_gpu 99
-PARAMETER num_ctx 32768
+PARAMETER num_ctx 65536
 PARAMETER temperature 0.3
 
 # DO NOT ADD A SYSTEM PROMPT HERE. Let Claude Code supply its agent framework instructions natively.

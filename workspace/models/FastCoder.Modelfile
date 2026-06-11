@@ -1,4 +1,4 @@
-FROM qwen2.5-coder:3b
+FROM qwen2.5-coder:1.5b
 
 # Hardware & Engine Allocations
 PARAMETER num_gpu 99
@@ -11,8 +11,8 @@ PARAMETER temperature 0.2
 PARAMETER num_predict 1024
 
 # Stop tokens mapped explicitly to intercept tool loops
-PARAMETER stop "<|im_end|>"
-PARAMETER stop "<|endoftext|>"
-PARAMETER stop "<|object_ref_start|>"
+#PARAMETER stop "<|im_end|>"
+#PARAMETER stop "<|endoftext|>"
+#PARAMETER stop "<|object_ref_start|>"
 
 # DO NOT ADD A SYSTEM PROMPT HERE. Let Claude Code supply its agent framework instructions natively.
