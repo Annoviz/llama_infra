@@ -3,9 +3,9 @@
 # - source_type=gguf: ensure /models files exist (optional download URLs)
 # Use one source type per model entry.
 models:
-  - id: qwen3_6_coder
+  - id: qwen3_6_35b
     source_type: ollama
-    ollama_model: qwen3.6:27b
+    ollama_model: qwen3.6:35b
 
   - id: qwen3_coder_30b
     source_type: ollama
