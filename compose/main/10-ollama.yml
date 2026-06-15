@@ -1,6 +1,6 @@
 services:
   ollama-server:
-    image: ollama/ollama:${OLLAMA_VERSION:-0.30.6}
+    image: ollama/ollama:${OLLAMA_VERSION:-0.30.8}
     container_name: ollama-server
     shm_size: '16gb'
 #    entrypoint: ["/bin/sh", "/app/scripts/entrypoint.ollama.sh"]
@@ -26,9 +26,13 @@ services:
       OLLAMA_MODELS: /models
       OLLAMA_KV_CACHE_TYPE: q8_0 # can be: f16, q8_0, q4_0
       OLLAMA_FLASH_ATTENTION: 1
-      OLLAMA_MAX_LOADED_MODELS: 3 # Planner, Coder, Fast-Coder
-      OLLAMA_NUM_PARALLEL: 4
-      OLLAMA_KEEP_ALIVE: 24h
+      OLLAMA_MAX_LOADED_MODELS: 1
+      OLLAMA_NUM_PARALLEL: 1
+      OLLAMA_KEEP_ALIVE: 30m
+      OLLAMA_CONTEXT_LENGTH: 65536 #32768
+      OLLAMA_DRAFT_MTP: 1
+      OLLAMA_CUDA_DRIVERS: 1
+      OLLAMA_NUM_PREDICT: 8192
     # dns:
     #   - 8.8.8.8      # Google Primary Public DNS
     #   - 1.1.1.1      # Cloudflare Secondary Public DNS

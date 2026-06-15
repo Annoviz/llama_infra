@@ -1,0 +1,16 @@
+# Pull the Unsloth Dynamic 2.0 6-bit MTP GGUF directly from Hugging Face
+FROM hf.co/unsloth/Qwen3-Coder-30B-A3B-Instruct-GGUF:Q6_K
+
+# Allocates a stable, deep context window fully cached in VRAM
+PARAMETER num_ctx 49152
+
+# Specific sampling adjustments recommended for Qwen3 Coder's non-thinking profile
+PARAMETER temperature 0.1
+PARAMETER top_p 0.8
+
+# Target Configuration for Low-latency High-throughput Generation
+PARAMETER num_gpu 99
+
+
+# DO NOT ADD A SYSTEM PROMPT HERE. Let Claude Code supply its agent framework instructions natively.
+

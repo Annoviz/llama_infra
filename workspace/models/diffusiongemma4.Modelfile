@@ -1,0 +1,16 @@
+# Target the official Unsloth DiffusionGemma MoE GGUF file
+FROM hf.co/unsloth/diffusiongemma-26B-A4B-it-GGUF:diffusiongemma-26b-a4b-it-UD-Q6_K.gguf
+
+# Hardware Allocations for MoE Inference
+PARAMETER num_gpu 99
+PARAMETER num_ctx 32768
+PARAMETER num_thread 16
+
+# Discrete Text Diffusion Canvas Configurations
+# DiffusionGemma requires a lower initial temperature to anchor block confidence
+PARAMETER temperature 0.8
+PARAMETER top_p 0.95
+PARAMETER min_p 0.05
+
+
+# DO NOT ADD A SYSTEM PROMPT HERE. Let Claude Code supply its agent framework instructions natively.

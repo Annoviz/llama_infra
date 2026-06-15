@@ -1,0 +1,28 @@
+# Target Unsloth's optimized 4-bit GGUF to ensure the entire 80B MoE layers lock cleanly in 48GB VRAM
+FROM hf.co/unsloth/Qwen3-Coder-Next-GGUF:Qwen3-Coder-Next-Q4_K_M.gguf
+
+# Workstation Core Isolation (Dual Xeon + RTX 6000 Ada)
+# Loads all model layers inside VRAM to prevent system memory spillover
+PARAMETER num_gpu 99
+
+# Locks context to 32k tokens to preserve the VRAM headroom needed for the MoE routing tensors
+PARAMETER num_ctx 32768
+
+# Pins execution threads strictly to a single NUMA socket boundary to eliminate cross-talk
+PARAMETER num_thread 16
+
+# Precision Coding Inference Settings (Official Unsloth & Qwen Agent Parameters)
+# Very low temperature reduces logic drift and hallucinated APIs
+PARAMETER temperature 0.2
+
+# Tighter sampling boundaries prevent the selection of bad tokens during code assembly
+PARAMETER top_p 0.85
+PARAMETER top_k 20
+PARAMETER repeat_penalty 1.05
+
+# Strict Stop Tokens for IDE/Agent Parsing Integration
+#PARAMETER stop "<|im_start|>"
+#PARAMETER stop "<|im_end|>"
+#PARAMETER stop "<|endoftext|>"
+
+# DO NOT ADD A SYSTEM PROMPT HERE. Let Claude Code supply its agent framework instructions natively.

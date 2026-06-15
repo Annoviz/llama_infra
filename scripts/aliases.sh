@@ -2,7 +2,9 @@
 # Local Claude Code + Ollama shell aliases
 # Usage: source scripts/aliases.sh   (or add to ~/.bashrc)
 
-export CLAUDE_CODE_MAX_OUTPUT_TOKENS=131072
+
+# export CLAUDE_CODE_MAX_OUTPUT_TOKENS=131072
+export CLAUDE_CODE_MAX_OUTPUT_TOKENS=8192
 
 # Configure Claude for cloud routing (team / work profile)
 claude-set-work() {

@@ -1,9 +1,17 @@
-FROM qwen3-coder:30b
+# Target the superior Unsloth Dynamic Q4_K_M file
+FROM hf.co/unsloth/Qwen3-Coder-Next-GGUF:Qwen3-Coder-Next-UD-Q4_K_M.gguf
 
-# Target Configuration for Low-latency High-throughput Generation
+# Workstation Core Isolation (Dual Xeon + RTX 6000 Ada)
 PARAMETER num_gpu 99
-PARAMETER num_ctx 65536
-PARAMETER temperature 0.3
+PARAMETER num_ctx 32768
+PARAMETER num_thread 16
+
+# Precision Coding Inference Settings
+PARAMETER temperature 0.2
+PARAMETER top_p 0.85
+PARAMETER top_k 20
+PARAMETER repeat_penalty 1.05
+
 
 # DO NOT ADD A SYSTEM PROMPT HERE. Let Claude Code supply its agent framework instructions natively.
 

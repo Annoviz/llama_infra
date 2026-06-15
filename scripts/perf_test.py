@@ -43,10 +43,23 @@ from typing import List, Optional, Iterator
 # Default prompts from the bash script
 DEFAULT_PROMPTS = [
     "Who won the World Series in 2020?",
-    "If I am 6 feet and 2 inches tall, what is my height in centimeters?"
+    "If I am 6 feet and 2 inches tall, what is my height in centimeters?",
+    "write highly complex python code for threaded video processing"
 ]
 
 DEFAULT_BASE_URL = "http://localhost:11434"
+
+
+def prompt_label(prompt: str, max_len: int = 28) -> str:
+    """Return a short, readable label for a prompt string.
+
+    Truncates to *max_len* chars and appends '…' if longer.
+    Collapses internal whitespace runs into single spaces.
+    """
+    text = " ".join(prompt.split())
+    if len(text) > max_len:
+        return text[:max_len - 1] + "…"
+    return text
 
 
 @dataclass
@@ -72,20 +85,34 @@ def list_models(base_url: str) -> List[str]:
 
 
 def _sse_iter(url: str, body: dict) -> Iterator[dict]:
-    """Generator yielding parsed JSON objects from SSE stream."""
+    """Generator yielding parsed JSON objects from SSE/JSONL streams.
+
+    Handles both OpenAI-style SSE (lines prefixed with "data: ") and
+    Ollama's native JSONL streaming (bare JSON on each line).
+    """
     try:
-        req = urllib.request.Request(url)
+        req = urllib.request.Request(url, method="POST")
         req.add_header("Content-Type", "application/json")
         req.data = json.dumps(body).encode()
 
-        with urllib.request.urlopen(req, timeout=10) as response:
-            for line in response:
+        with urllib.request.urlopen(req) as response:
+            for raw_line in response:
+                line = raw_line.strip()
+                if not line:
+                    continue
+
+                # Strip OpenAI-style SSE prefix
                 if line.startswith(b"data: "):
-                    try:
-                        yield json.loads(line[6:].decode())
-                    except json.JSONDecodeError:
-                        continue
-    except Exception:
+                    line = line[6:]
+                elif line == b"[DONE]":
+                    continue
+
+                try:
+                    yield json.loads(line.decode())
+                except (json.JSONDecodeError, UnicodeDecodeError):
+                    continue
+    except Exception as e:
+        print(f"SSE error: {e}", file=sys.stderr)
         return
 
 
@@ -148,13 +175,6 @@ def run_benchmark(model: str, prompt: str, config: dict) -> Optional[BenchmarkRe
         return None
 
 
-def prompt_label(prompt: str) -> str:
-    """Get a short label for a prompt for display."""
-    if len(prompt) <= 40:
-        return prompt
-    return prompt[:37] + "..."
-
-
 def compute_aggregates(results_for_combo: List[BenchmarkResult]) -> dict:
     """Compute mean ± min/max per metric for a combo of results."""
     if not results_for_combo:
@@ -188,17 +208,39 @@ def compute_aggregates(results_for_combo: List[BenchmarkResult]) -> dict:
 
 
 def print_table(all_results: List[BenchmarkResult]) -> None:
-    """Print results in a formatted table."""
+    """Print results in a formatted table with per-combo summary."""
     # Sort by model then prompt
     all_results.sort(key=lambda r: (r.model, r.prompt_label))
 
-    # Print header
-    print("Model         | Prompt                           | Tokens/s | First(ms) | Total(s) | In  | Out")
-    print("--------------|----------------------------------|----------|-----------|----------|-----|----")
-
-    # Print each result
+    # Group by (model, prompt)
+    grouped: dict[tuple[str, str], list[BenchmarkResult]] = {}
     for result in all_results:
-        print(f"{result.model:<13} | {result.prompt_label:<32} | {result.tokens_per_sec:>8.1f} | {result.first_token_ms:>9.1f} | {result.total_duration_s:>8.2f} | {result.input_tokens:>3} | {result.output_tokens:>3}")
+        key = (result.model, result.prompt_label)
+        if key not in grouped:
+            grouped[key] = []
+        grouped[key].append(result)
+
+    # Print header
+    print("Model         | Prompt                       | Tokens/s | First(ms) | Total(s) | In  | Out")
+    print("--------------|------------------------------|----------|-----------|----------|-----|----")
+
+
+    for (model, prompt_label), results in grouped.items():
+        # Individual iterations
+        for result in results:
+            print(f"{result.model:<13} | {prompt_label:<28} | {result.tokens_per_sec:>8.1f} | {result.first_token_ms:>9.1f} | {result.total_duration_s:>8.2f} | {result.input_tokens:>3} | {result.output_tokens:>3}")
+
+        # Summary row
+        agg = compute_aggregates(results)
+        if len(results) > 1:
+            print(f"{model:<13} | {'(summary)':<28} | "
+                  f"mean={agg['avg_tokens_per_sec']:>7.1f}/min={agg['min_tokens_per_sec']:.0f}/max={agg['max_tokens_per_sec']:.0f}  "
+                  f"mean={agg['avg_first_token_ms']:>7.1f}/min={agg['min_first_token_ms']:.0f}/max={agg['max_first_token_ms']:.0f}  "
+                  f"mean={agg['avg_total_duration_s']:>7.2f}/min={agg['min_total_duration_s']:.2f}/max={agg['max_total_duration_s']:.2f}  "
+                  f"mean={agg['avg_input_tokens']:.0f}/{agg['min_input_tokens']:.0f}/{agg['max_input_tokens']:.0f}  "
+                  f"mean={agg['avg_output_tokens']:.0f}/{agg['min_output_tokens']:.0f}/{agg['max_output_tokens']:.0f}")
+        else:
+            print(f"{model:<13} | {'(summary)':<28} | {results[0].tokens_per_sec:>8.1f} | {results[0].first_token_ms:>9.1f} | {results[0].total_duration_s:>8.2f} | {results[0].input_tokens:>3} | {results[0].output_tokens:>3}")
 
 
 def print_json(all_results: List[BenchmarkResult]) -> None:
@@ -213,10 +255,10 @@ def print_json(all_results: List[BenchmarkResult]) -> None:
 
     # Compute aggregates
     aggregated = []
-    for (model, prompt_label), results in grouped.items():
+    for (model, plabel), results in grouped.items():
         agg = compute_aggregates(results)
         agg["model"] = model
-        agg["prompt"] = prompt_label
+        agg["prompt"] = plabel
         aggregated.append(agg)
 
     print(json.dumps(aggregated, indent=2))
@@ -235,7 +277,7 @@ def build_parser() -> argparse.ArgumentParser:
 
     # Optional arguments
     parser.add_argument("--prompt", action="append", dest="prompts", help="Single prompt string (repeatable)")
-    parser.add_argument("--prompts", help="Path to file with one prompt per line (# = comment)")
+    parser.add_argument("--prompts-file", dest="prompts_file", help="Path to file with one prompt per line (# = comment)")
     parser.add_argument("--model", action="append", dest="models_alt", help="Alternative single model name (repeatable)")
     parser.add_argument("--models", help="Comma-separated list of models")
     parser.add_argument("--max-tokens", type=int, default=128, help="Max output tokens (default: 128)")
@@ -289,10 +331,10 @@ def main(argv=None) -> int:
     if args.prompts:
         prompts.extend(args.prompts or [])
 
-    # Add prompts from --prompts file
-    if args.prompts:
+    # Add prompts from --prompts-file argument
+    if args.prompts_file:
         try:
-            with open(args.prompts, "r") as f:
+            with open(args.prompts_file, "r") as f:
                 for line in f:
                     line = line.strip()
                     if line and not line.startswith("#"):

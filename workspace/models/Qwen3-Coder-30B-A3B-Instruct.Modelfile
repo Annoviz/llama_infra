@@ -1,0 +1,36 @@
+# Target the high-precision Unsloth Dynamic Q6 Extra-Large matrix file
+FROM hf.co/unsloth/Qwen3-Coder-30B-A3B-Instruct-GGUF:Qwen3-Coder-30B-A3B-Instruct-UD-Q6_K_XL.gguf
+
+# Workstation Core Isolation (Dual Xeon + RTX 6000 Ada 48GB)
+# Loads all 48 model layers entirely inside the 48GB Ada VRAM
+PARAMETER num_gpu 99
+
+# 32k context comfortably holds heavy classes and multi-file codebases
+PARAMETER num_ctx 32768
+
+# Keeps threads isolated to a single physical CPU socket to stop NUMA latency
+PARAMETER num_thread 16
+
+# Precision Coding Inference Parameters (Official Qwen3 Alignment)
+# Extremely low temperature forces mathematical, predictable output
+PARAMETER temperature 0.1
+
+# Drops the bottom 20% most uncertain or risky tokens
+PARAMETER top_p 0.80
+
+# Forces the model to only select from the top 20 best token options
+PARAMETER top_k 20
+
+# Dynamically removes random noise tokens relative to the leading token
+PARAMETER min_p 0.05
+
+# Official Qwen adjustment to stop infinite loops in logic blocks
+PARAMETER repeat_penalty 1.05
+
+# Strict Stop Tokens for IDE/Agent Parsing Integration
+#PARAMETER stop "<|im_start|>"
+#PARAMETER stop "<|im_end|>"
+#PARAMETER stop "<|endoftext|>"
+
+# DO NOT ADD A SYSTEM PROMPT HERE. Let Claude Code supply its agent framework instructions natively.
+

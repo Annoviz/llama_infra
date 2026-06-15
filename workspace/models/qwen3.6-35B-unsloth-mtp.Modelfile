@@ -1,0 +1,11 @@
+# Pull the Unsloth Dynamic 2.0 6-bit MTP GGUF directly from Hugging Face
+FROM hf.co/unsloth/Qwen3.6-35B-A3B-MTP-GGUF:Q6_K
+PARAMETER num_gpu 99
+PARAMETER num_ctx 32768
+PARAMETER temperature 0.1
+
+
+# Force MTP execution flags inside Ollama's backend
+PARAMETER spec_type draft-mtp
+
+# DO NOT ADD A SYSTEM PROMPT HERE. Let Claude Code supply its agent framework instructions natively.

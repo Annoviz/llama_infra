@@ -1,0 +1,21 @@
+# 1. Pull the precision-optimized Unsloth Dynamic Q6 QAT version
+FROM hf.co/unsloth/gemma-4-31B-it-qat-GGUF:gemma-4-31b-it-qat-UD-Q6_K_M.gguf
+
+# 2. Load the native Speculative MTP Lookahead Layer
+ADAPTER gemma4:assistant
+
+# 3. Hardware-Specific Hardware Allocations (RTX 6000 Ada)
+PARAMETER num_gpu 99               # Pins the dense 31B architecture entirely inside the GPU
+PARAMETER num_ctx 32768            # Expanded 32k context size safely within 48GB constraints
+PARAMETER num_thread 16            # High thread efficiency prevents CPU bottlenecks during checks
+
+# 4. Multi-Token Prediction (MTP) Tuning
+PARAMETER draft_num_predict 3     # Pushed to 3 to capitalize on Ada's high-parallelism bandwidth
+
+# 5. Gemma 4 Native Sampling Settings
+PARAMETER temperature 1.0         # Gemma 4 works best with standard loose temperature mapping
+PARAMETER top_p 0.95
+PARAMETER top_k 64
+
+
+# DO NOT ADD A SYSTEM PROMPT HERE. Let Claude Code supply its agent framework instructions natively.

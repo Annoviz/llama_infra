@@ -1,7 +1,20 @@
-FROM qwen3.6:35b
+# Target the high-precision Unsloth Dynamic Q6 file
+FROM hf.co/unsloth/Qwen3.6-35B-A3B-MTP-GGUF:Qwen3.6-35B-A3B-UD-Q6_K.gguf
+
+# Hardware Allocations for RTX 6000 Ada
 PARAMETER num_gpu 99
+#PARAMETER num_ctx 32768
 PARAMETER num_ctx 65536
-PARAMETER temperature 0.1
+PARAMETER num_predict 8192
+PARAMETER num_thread 16
+
+# Multi-Token Prediction Lookahead Layers
+PARAMETER draft_num_predict 2
+
+# Sampling Alignment Settings
+PARAMETER temperature 0.6
+PARAMETER top_p 0.90
+PARAMETER repeat_penalty 1.1
+
 
 # DO NOT ADD A SYSTEM PROMPT HERE. Let Claude Code supply its agent framework instructions natively.
-
