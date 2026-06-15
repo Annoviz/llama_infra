@@ -37,8 +37,8 @@ import sys
 import time
 import urllib.request
 import urllib.error
-from dataclasses import dataclass, asdict
-from typing import List, Optional, Iterator
+from dataclasses import dataclass
+from typing import List, Optional
 
 # Default prompts from the bash script
 DEFAULT_PROMPTS = [
@@ -84,46 +84,19 @@ def list_models(base_url: str) -> List[str]:
         return []
 
 
-def _sse_iter(url: str, body: dict) -> Iterator[dict]:
-    """Generator yielding parsed JSON objects from SSE/JSONL streams.
-
-    Handles both OpenAI-style SSE (lines prefixed with "data: ") and
-    Ollama's native JSONL streaming (bare JSON on each line).
-    """
-    try:
-        req = urllib.request.Request(url, method="POST")
-        req.add_header("Content-Type", "application/json")
-        req.data = json.dumps(body).encode()
-
-        with urllib.request.urlopen(req) as response:
-            for raw_line in response:
-                line = raw_line.strip()
-                if not line:
-                    continue
-
-                # Strip OpenAI-style SSE prefix
-                if line.startswith(b"data: "):
-                    line = line[6:]
-                elif line == b"[DONE]":
-                    continue
-
-                try:
-                    yield json.loads(line.decode())
-                except (json.JSONDecodeError, UnicodeDecodeError):
-                    continue
-    except Exception as e:
-        print(f"SSE error: {e}", file=sys.stderr)
-        return
-
-
 def run_benchmark(model: str, prompt: str, config: dict) -> Optional[BenchmarkResult]:
-    """Run a single benchmark iteration."""
+    """Run a single benchmark iteration.
+
+    Returns (BenchmarkResult | None): result on success, None if the request
+    failed entirely (network error, empty response, etc.).  Errors are logged
+    to stderr so they don't silently disappear from the user's view.
+    """
     base_url = config.get("base_url", DEFAULT_BASE_URL)
     max_tokens = config.get("max_tokens", 128)
     timeout = config.get("timeout", 600)
 
     start_time = time.time()
-    first_token_time = None
+    first_token_ms: float = -1.0
 
     try:
         # Prepare the request body
@@ -134,44 +107,73 @@ def run_benchmark(model: str, prompt: str, config: dict) -> Optional[BenchmarkRe
             "options": {"num_predict": max_tokens}
         }
 
-        # Track first token time
-        chunks = list(_sse_iter(f"{base_url}/api/chat", body))
-
-        if not chunks:
-            return None
-
-        # Process all chunks to get final metrics
-        total_duration_s = time.time() - start_time
+        # Track first token time as soon as we see the first chunk
+        first_chunk_seen = False
         input_tokens = 0
         output_tokens = 0
         tokens_per_sec = 0.0
 
-        for chunk in chunks:
-            if "prompt_eval_count" in chunk:
-                input_tokens = chunk["prompt_eval_count"]
-            if "eval_count" in chunk:
-                output_tokens = chunk["eval_count"]
-            if "eval_duration" in chunk and "eval_count" in chunk:
-                # Calculate tokens per second using server-side timing
-                eval_duration_s = chunk["eval_duration"] / 1e9
-                if eval_duration_s > 0:
-                    tokens_per_sec = chunk["eval_count"] / eval_duration_s
+        req = urllib.request.Request(f"{base_url}/api/chat", method="POST")
+        req.add_header("Content-Type", "application/json")
+        req.data = json.dumps(body).encode()
 
-        # First token time is the time from start to first non-header chunk
-        first_token_time = (time.time() - start_time) * 1000
+        with urllib.request.urlopen(req, timeout=timeout) as response:
+            for raw_line in response:
+                line = raw_line.strip()
+                if not line:
+                    continue
+
+                # Strip OpenAI-style SSE prefix (Ollama sends bare JSONL)
+                if line.startswith(b"data: "):
+                    line = line[6:]
+                elif line == b"[DONE]":
+                    continue
+
+                try:
+                    chunk = json.loads(line.decode())
+                except (json.JSONDecodeError, UnicodeDecodeError):
+                    continue
+
+                # Measure wall-clock from request start to first data chunk
+                if not first_chunk_seen:
+                    first_token_ms = (time.time() - start_time) * 1000
+                    first_chunk_seen = True
+
+                # Accumulate metrics — Ollama may emit these in the same chunk
+                if "prompt_eval_count" in chunk:
+                    input_tokens = chunk["prompt_eval_count"]
+                if "eval_count" in chunk:
+                    output_tokens = chunk["eval_count"]
+                if "eval_duration" in chunk and "eval_count" in chunk:
+                    eval_duration_s = chunk["eval_duration"] / 1e9
+                    if eval_duration_s > 0:
+                        tokens_per_sec = chunk["eval_count"] / eval_duration_s
+
+        total_duration_s = time.time() - start_time
+
+        # Guard against empty response (no chunks emitted at all)
+        if not first_chunk_seen:
+            print(f"Empty response from {model}", file=sys.stderr)
+            return None
 
         return BenchmarkResult(
             model=model,
             prompt_label=prompt_label(prompt),
-            first_token_ms=first_token_time,
+            first_token_ms=first_token_ms,
             total_duration_s=total_duration_s,
             input_tokens=input_tokens,
             output_tokens=output_tokens,
             tokens_per_sec=tokens_per_sec
         )
+
+    except urllib.error.URLError as e:
+        print(f"Network error benchmarking {model}: {e.reason}", file=sys.stderr)
+        return None
+    except TimeoutError:
+        print(f"Timeout benchmarking {model} ({timeout}s limit)", file=sys.stderr)
+        return None
     except Exception as e:
-        # Log error but continue with next iteration
-        print(f"Error running benchmark for {model}: {e}", file=sys.stderr)
+        print(f"Error running benchmark for {model}: {type(e).__name__}: {e}", file=sys.stderr)
         return None
 
 
@@ -224,11 +226,10 @@ def print_table(all_results: List[BenchmarkResult]) -> None:
     print("Model         | Prompt                       | Tokens/s | First(ms) | Total(s) | In  | Out")
     print("--------------|------------------------------|----------|-----------|----------|-----|----")
 
-
-    for (model, prompt_label), results in grouped.items():
+    for (model, plabel), results in grouped.items():
         # Individual iterations
         for result in results:
-            print(f"{result.model:<13} | {prompt_label:<28} | {result.tokens_per_sec:>8.1f} | {result.first_token_ms:>9.1f} | {result.total_duration_s:>8.2f} | {result.input_tokens:>3} | {result.output_tokens:>3}")
+            print(f"{result.model:<13} | {plabel:<28} | {result.tokens_per_sec:>8.1f} | {result.first_token_ms:>9.1f} | {result.total_duration_s:>8.2f} | {result.input_tokens:>3} | {result.output_tokens:>3}")
 
         # Summary row
         agg = compute_aggregates(results)
@@ -350,10 +351,17 @@ def main(argv=None) -> int:
     # Run benchmarks
     all_results = []
     errors_occurred = False
+    total_combos = len(models) * len(prompts)
+    combo_idx = 0
 
     for model in models:
         for prompt in prompts:
-            print(f"Running benchmark for {model} with prompt: {prompt_label(prompt)}", file=sys.stderr)
+            combo_idx += 1
+            plabel = prompt_label(prompt)
+            print(
+                f"[{combo_idx}/{total_combos}] {model} — {plabel}",
+                file=sys.stderr,
+            )
 
             # Run iterations
             results_for_combo = []
@@ -365,8 +373,15 @@ def main(argv=None) -> int:
                 })
                 if result:
                     results_for_combo.append(result)
+                    print(
+                        f"  iter {i + 1}/{args.iterations}: "
+                        f"{result.output_tokens} tok in {result.total_duration_s:.2f}s "
+                        f"({result.tokens_per_sec:.1f} t/s)",
+                        file=sys.stderr,
+                    )
                 else:
                     errors_occurred = True
+                    print(f"  iter {i + 1}/{args.iterations}: FAILED", file=sys.stderr)
 
             # Add to all results
             all_results.extend(results_for_combo)

@@ -45,7 +45,7 @@ LLAMA_CPP_IMAGE ?= ghcr.io/ggml-org/llama.cpp:full-cuda-b5350
 	restart-ollama restart-anythingllm restart-open-webui restart-falkordb restart-falkordb-mcp restart-unsloth restart-llamacpp restart-llamacpp-py \
 	logs-ollama logs-anythingllm logs-open-webui logs-falkordb logs-falkordb-mcp logs-unsloth logs-llamacpp logs-llamacpp-py \
 	ps-main ps-falkor ps-unsloth ps-llama ps-all \
-	gpu-host gpu-smoke-llamacpp clean
+	gpu-host gpu-smoke-llamacpp perf-test clean
 
 help:
 	@printf "\nllama_infra utility targets\n\n"
@@ -66,6 +66,9 @@ help:
 	@printf "  make build-llamacpp-py   # Build the python llama-cpp server image\n"
 	@printf "  make up-llamacpp-py      # Start the python llama-cpp server\n"
 	@printf "  make down-llama          # Stop the llama.cpp stack\n"
+	@printf "Benchmarks:\n"
+	@printf "  make perf-test [ARGS='--model foo --iterations 5']\n"
+	@printf "                        # Run performance tests (pass extra args via ARGS)\n"
 	@printf "\nDiagnostics:\n"
 	@printf "  make config-all          # Render both compose files\n"
 	@printf "  make pull-all            # Pull all pinned images\n"
@@ -267,6 +270,10 @@ ps-llama:
 	$(COMPOSE_LLAMA) ps
 
 ps-all: ps-main ps-falkor ps-unsloth ps-llama
+
+perf-test:
+	@echo "Running performance tests..." >&2
+	scripts/perf_test.sh $(ARGS)
 
 gpu-host:
 	nvidia-smi
