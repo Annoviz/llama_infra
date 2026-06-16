@@ -1,13 +1,17 @@
-# Target the superior Unsloth Dynamic Q4_K_M file
-FROM hf.co/unsloth/Qwen3-Coder-Next-GGUF:Qwen3-Coder-Next-UD-Q4_K_M.gguf
-
+# Target the superior Unsloth Dynamic file
+FROM hf.co/unsloth/Qwen3-Coder-30B-A3B-Instruct-GGUF:Q6_K
+#FROM hf.co/unsloth/Qwen3-Coder-Next-GGUF:Qwen3-Coder-Next-UD-Q4_K_M.gguf
+#FROM hf.co/unsloth/Qwen3-Coder-Next-GGUF:Qwen3-Coder-Next-UD-Q4_K_S.gguf
+#FROM hf.co/unsloth/Qwen3-Coder-Next-GGUF:Qwen3-Coder-Next-UD-IQ4_NL.gguf
+#FROM deepseek-coder-v2:16b-lite-instruct-q8_0
 # Workstation Core Isolation (Dual Xeon + RTX 6000 Ada)
 PARAMETER num_gpu 99
 PARAMETER num_ctx 32768
+#PARAMETER num_ctx 16384
 PARAMETER num_thread 16
 
 # Precision Coding Inference Settings
-PARAMETER temperature 0.2
+PARAMETER temperature 0.1
 PARAMETER top_p 0.85
 PARAMETER top_k 20
 PARAMETER repeat_penalty 1.05

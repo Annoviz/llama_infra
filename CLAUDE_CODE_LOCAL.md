@@ -163,58 +163,65 @@ Inside your Claude session, switch model aliases as needed:
 /model ollama/planner
 ```
 
-## Phase 5 - Lightweight benchmark script
+## Phase 5 — Benchmarking & regression tracking
 
-`workspace/benchmark.py` is already committed in the repo. To run it:
+The repo ships two Python scripts for systematic model benchmarking with JSON output and regression comparison.
 
-```python
-import time
-import requests
+### Running benchmarks
 
-
-def eval_speed(model_name: str) -> None:
-    payload = {
-        "model": model_name,
-        "prompt": "Write a short Python function that validates IPv4 addresses.",
-        "stream": False,
-        "options": {"num_ctx": 4096},
-    }
-
-    started = time.time()
-    try:
-        response = requests.post(
-            "http://localhost:11434/api/generate",
-            json=payload,
-            timeout=120,
-        )
-        elapsed = time.time() - started
-        response.raise_for_status()
-    except requests.RequestException as exc:
-        print(f"[error] {model_name}: {exc}")
-        return
-
-    data = response.json()
-    tokens = int(data.get("eval_count", 0))
-    eval_duration_ns = int(data.get("eval_duration", 0))
-    eval_seconds = eval_duration_ns / 1_000_000_000 if eval_duration_ns > 0 else 0.0
-    tps = (tokens / eval_seconds) if eval_seconds > 0 else 0.0
-
-    print(
-        f"{model_name}: {tps:.2f} tok/s | tokens={tokens} "
-        f"| eval_s={eval_seconds:.2f} | wall_s={elapsed:.2f}"
-    )
-
-
-if __name__ == "__main__":
-    eval_speed("planner")
-    eval_speed("coder")
-```
-
-Install dependency and run:
+`scripts/perf_test.py` measures TTFT, throughput, and duration per iteration via the Ollama `/api/chat` endpoint. It writes structured results to `output_dir/results.json`.
 
 ```bash
-python3 -m pip install requests
-python3 workspace/benchmark.py
+# Quick single-model run (3 iterations × 3 default prompts)
+python3 scripts/perf_test.py planner --iterations 5 --output-dir ./benchmarks/planner
+
+# Multi-model, custom prompt file
+python3 scripts/perf_test.py \
+    --models coder,planner \
+    --prompts-file workspace/prompts.txt \
+    --max-tokens 256 \
+    --iterations 5 \
+    --output-dir ./benchmarks/run-$(date +%Y%m%d)
+
+# Table output (default), or JSON to stdout:
+python3 scripts/perf_test.py coder --json
+```
+
+**Key options:** `--prompts-file`, `--max-tokens N`, `--iterations N`, `--timeout SECS`, `--base-url URL`.  
+Each run gets a unique `run_id` (timestamp + random suffix) and the output directory contains:
+
+- `results.json` — full structured data: per-iteration metrics, aggregates, raw response text, and the original prompt.
+
+### Comparing against a reference (regression detection)
+
+`scripts/model_regression.py` loads a previous `results.json` and compares performance + output consistency for every matched `(model, prompt)` combo.
+
+```bash
+# Compare latest run against an older baseline
+python3 scripts/model_regression.py \
+    --reference ./benchmarks/old-run/results.json \
+    --output-dir ./regression-report
+
+# Custom thresholds (5 % warn, 10 % critical)
+python3 scripts/model_regression.py \
+    --reference ./benchmarks/baseline/results.json \
+    ./benchmarks/latest/results.json \
+    --warn-threshold 5 --critical-threshold 10
+
+# Pipe from stdin
+cat results.json | python3 scripts/model_regression.py --reference ref_results.json
+```
+
+The regression report flags:
+- **Performance regressions** — metric deltas on `tokens_per_sec`, `first_token_ms`, `total_duration_s` (warn ≥ 5 %, critical ≥ 10 %).
+- **Output consistency** — whether all iterations produce identical text, and similarity of the first iteration vs reference.
+
+Exit codes: `0` = no regressions, `1` = critical found, `2` = warnings only.
+
+### Makefile shortcut
+
+```bash
+make perf-test ARGS="--model planner --iterations 5"   # runs perf_test.sh → perf_test.py
 ```
 
 ## Troubleshooting quick checks

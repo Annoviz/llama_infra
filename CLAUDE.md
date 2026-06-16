@@ -59,6 +59,12 @@ make precommit-run      # Run all hooks (ruff, black, yaml/json checks, agent do
 make verify-agent-routing  # Validate agent docs + run unit tests
 ```
 
+### Benchmarking
+```bash
+make perf-test ARGS="--model planner --iterations 5"   # Run performance tests
+python3 scripts/model_regression.py --reference ref.json current.json  # Compare runs
+```
+
 ### Update manager
 ```bash
 make updates-check      # Check latest Docker tags and Python versions

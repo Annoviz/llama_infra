@@ -15,6 +15,7 @@ Options:
   --max-tokens N        Max output tokens  (default: 128)
   --iterations N        Number of iterations per model  (default: 3)
   --output FILE         Write JSON results to this file
+  --output-dir DIR      Directory for results.json (auto-generated run_id)
   --base-url URL        Ollama base URL  (default: http://localhost:11434)
   --timeout SECS        Per-request timeout  (default: 600)
   --json                Output results as JSON instead of table
@@ -32,13 +33,18 @@ Exit codes:
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
+import os
+import random
+import string
 import sys
 import time
 import urllib.request
 import urllib.error
-from dataclasses import dataclass
-from typing import List, Optional
+from dataclasses import asdict, dataclass
+from typing import Any, Dict, List, Optional
+
 
 # Default prompts from the bash script
 DEFAULT_PROMPTS = [
@@ -48,6 +54,17 @@ DEFAULT_PROMPTS = [
 ]
 
 DEFAULT_BASE_URL = "http://localhost:11434"
+
+
+def generate_run_id() -> str:
+    """Generate a unique run identifier.
+
+    Format: YYYYMMDD-HHMMSS-<6 random chars>
+    Example: 20260615-143022-a7b3c9
+    """
+    timestamp = time.strftime("%Y%m%d-%H%M%S")
+    rand_suffix = "".join(random.choices(string.ascii_lowercase + string.digits, k=6))
+    return f"{timestamp}-{rand_suffix}"
 
 
 def prompt_label(prompt: str, max_len: int = 28) -> str:
@@ -71,6 +88,8 @@ class BenchmarkResult:
     input_tokens: int
     output_tokens: int
     tokens_per_sec: float
+    # Optional fields filled during collection
+    raw_text: str = ""
 
 
 def list_models(base_url: str) -> List[str]:
@@ -97,6 +116,7 @@ def run_benchmark(model: str, prompt: str, config: dict) -> Optional[BenchmarkRe
 
     start_time = time.time()
     first_token_ms: float = -1.0
+    raw_text_parts: List[str] = []
 
     try:
         # Prepare the request body
@@ -134,6 +154,11 @@ def run_benchmark(model: str, prompt: str, config: dict) -> Optional[BenchmarkRe
                 except (json.JSONDecodeError, UnicodeDecodeError):
                     continue
 
+                # Capture raw output text from content field
+                message = chunk.get("message", {})
+                if message.get("role") == "assistant" and "content" in message:
+                    raw_text_parts.append(message["content"])
+
                 # Measure wall-clock from request start to first data chunk
                 if not first_chunk_seen:
                     first_token_ms = (time.time() - start_time) * 1000
@@ -163,7 +188,8 @@ def run_benchmark(model: str, prompt: str, config: dict) -> Optional[BenchmarkRe
             total_duration_s=total_duration_s,
             input_tokens=input_tokens,
             output_tokens=output_tokens,
-            tokens_per_sec=tokens_per_sec
+            tokens_per_sec=tokens_per_sec,
+            raw_text="".join(raw_text_parts)
         )
 
     except urllib.error.URLError as e:
@@ -244,6 +270,50 @@ def print_table(all_results: List[BenchmarkResult]) -> None:
             print(f"{model:<13} | {'(summary)':<28} | {results[0].tokens_per_sec:>8.1f} | {results[0].first_token_ms:>9.1f} | {results[0].total_duration_s:>8.2f} | {results[0].input_tokens:>3} | {results[0].output_tokens:>3}")
 
 
+def results_to_dicts(all_results: List[BenchmarkResult], run_id: str,
+                     prompts_map: Dict[str, str]) -> List[Dict[str, Any]]:
+    """Convert BenchmarkResults to a flat list of result records for JSON output.
+
+    Each record contains:
+      - run_id: the unique identifier for this benchmark run
+      - model: model name
+      - prompt: full original prompt text (looked up via prompt_label)
+      - prompt_label: short label used in tables/keys
+      - iteration: 0-based iteration index within the combo
+      - raw_text: the assistant's full response text
+      - metrics: dict of numeric metrics for this iteration
+
+    Returns a list sorted by (model, prompt_label, iteration).
+    """
+    # Group by (model, prompt_label) to assign iteration indices
+    grouped: dict[tuple[str, str], list[BenchmarkResult]] = {}
+    for result in all_results:
+        key = (result.model, result.prompt_label)
+        if key not in grouped:
+            grouped[key] = []
+        grouped[key].append(result)
+
+    records: List[Dict[str, Any]] = []
+    for (model, plabel), results in sorted(grouped.items()):
+        # Compute aggregates for this combo and attach to each record
+        agg = compute_aggregates(results)
+        prompts_map[(model, plabel)] = None  # placeholder; caller fills
+
+        for idx, result in enumerate(results):
+            iter_metrics = {k: v for k, v in asdict(result).items() if k != "raw_text"}
+            records.append({
+                "run_id": run_id,
+                "model": model,
+                "prompt_label": plabel,
+                "iteration": idx,
+                "raw_text": result.raw_text,
+                "metrics": iter_metrics,
+                "aggregates": {k: v for k, v in agg.items() if k != "iterations"},
+            })
+
+    return records
+
+
 def print_json(all_results: List[BenchmarkResult]) -> None:
     """Print results as JSON with aggregates."""
     # Group by model and prompt
@@ -283,7 +353,8 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--models", help="Comma-separated list of models")
     parser.add_argument("--max-tokens", type=int, default=128, help="Max output tokens (default: 128)")
     parser.add_argument("--iterations", type=int, default=3, help="Iterations per model×prompt combo (default: 3)")
-    parser.add_argument("--output", help="Write JSON results to file")
+    parser.add_argument("--output", help="Write JSON results to this file")
+    parser.add_argument("--output-dir", dest="output_dir", help="Directory for auto-generated results.json (run_id-based)")
     parser.add_argument("--base-url", default=DEFAULT_BASE_URL, help="Ollama base URL (default: http://localhost:11434)")
     parser.add_argument("--timeout", type=int, default=600, help="Per-request timeout in seconds (default: 600)")
     parser.add_argument("--json", action="store_true", help="Output results as JSON to stdout instead of table")
@@ -348,6 +419,14 @@ def main(argv=None) -> int:
     if not prompts:
         prompts = DEFAULT_PROMPTS.copy()
 
+    # Generate run_id and build prompt label -> original text map
+    run_id = generate_run_id()
+    prompt_label_to_text: dict[tuple[str, str], str] = {}  # (model, label) → full prompt
+    for model in sorted(models):
+        for prompt in prompts:
+            key = (model, prompt_label(prompt))
+            prompt_label_to_text[key] = prompt
+
     # Run benchmarks
     all_results = []
     errors_occurred = False
@@ -392,13 +471,43 @@ def main(argv=None) -> int:
     else:
         print_table(all_results)
 
-    # Write to file if specified
+    # Build structured records with run_id, full prompts, and raw text
+    records = results_to_dicts(all_results, run_id, prompt_label_to_text)
+
+    # Fill in full prompt text into each record
+    for rec in records:
+        key = (rec["model"], rec["prompt_label"])
+        rec["prompt"] = prompt_label_to_text.get(key, rec["prompt_label"])
+
+    # Write to --output file if specified
     if args.output:
         try:
             with open(args.output, "w") as f:
-                print_json(all_results)
+                json.dump(records, f, indent=2)
         except Exception as e:
             print(f"Error writing to output file: {e}", file=sys.stderr)
+            errors_occurred = True
+
+    # Write results.json into --output-dir if specified
+    if args.output_dir:
+        try:
+            os.makedirs(args.output_dir, exist_ok=True)
+            results_path = os.path.join(args.output_dir, "results.json")
+            output_payload = {
+                "run_id": run_id,
+                "timestamp": time.strftime("%Y-%m-%dT%H:%M:%S"),
+                "base_url": args.base_url,
+                "max_tokens": args.max_tokens,
+                "iterations": args.iterations,
+                "models": sorted(models),
+                "prompts_count": len(prompts),
+                "results": records,
+            }
+            with open(results_path, "w") as f:
+                json.dump(output_payload, f, indent=2)
+            print(f"\nResults written to {results_path}", file=sys.stderr)
+        except Exception as e:
+            print(f"Error writing to output directory: {e}", file=sys.stderr)
             errors_occurred = True
 
     return 1 if errors_occurred else 0

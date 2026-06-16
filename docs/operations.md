@@ -67,6 +67,60 @@ make up-llamacpp-py
 - Editable dependency source: requirements-dev.txt
 - Frozen snapshot (report-only): workspace/requirements.txt
 
+## Benchmarking & regression tracking
+
+Two Python scripts under `scripts/` handle benchmarking and regression comparison.
+
+### perf_test.py — run benchmarks
+
+Measures TTFT, throughput, and duration per iteration via the Ollama `/api/chat` endpoint. Writes structured JSON to an output directory with a unique `run_id`.
+
+```bash
+# Single model, 5 iterations → writes to ./benchmarks/planner/results.json
+python3 scripts/perf_test.py planner --iterations 5 --output-dir ./benchmarks/planner
+
+# Multi-model + custom prompts file
+python3 scripts/perf_test.py \
+    --models coder,planner \
+    --prompts-file workspace/prompts.txt \
+    --max-tokens 256 \
+    --iterations 5 \
+    --output-dir ./benchmarks/run-$(date +%Y%m%d)
+
+# JSON to stdout (no table)
+python3 scripts/perf_test.py coder --json
+
+# Or via Makefile shortcut:
+make perf-test ARGS="--model planner --iterations 5"
+```
+
+Each `results.json` contains a flat list of per-iteration records with `run_id`, full prompt text, raw response output, per-iteration metrics, and combo-level aggregates.
+
+### model_regression.py — compare against reference
+
+Loads a previous `results.json` and compares every matched `(model, prompt)` combo for performance drift and output consistency.
+
+```bash
+# Compare latest run vs baseline; report written to ./regression-report/regression_report.json
+python3 scripts/model_regression.py \
+    --reference ./benchmarks/baseline/results.json \
+    --output-dir ./regression-report
+
+# Multiple current runs in one pass
+python3 scripts/model_regression.py \
+    --reference ref_results.json run1.json run2.json
+
+# Pipe from stdin, custom thresholds (5 % warn / 8 % critical)
+cat results.json | python3 scripts/model_regression.py \
+    --reference ref_results.json --warn-threshold 5 --critical-threshold 8
+```
+
+Checks performed:
+- **Performance regression** — percentage delta on `tokens_per_sec`, `first_token_ms`, `total_duration_s` (and their min/max variants). Warn ≥ threshold %, critical ≥ critical threshold %.
+- **Output consistency** — are all iterations identical? (non-determinism) and how similar is the first iteration vs reference (`difflib.SequenceMatcher` ratio; < 80 % warn, < 50 % critical).
+
+Exit codes: `0` = no regressions, `1` = critical found, `2` = warnings only.
+
 ## Code quality (pre-commit)
 
 ```bash
