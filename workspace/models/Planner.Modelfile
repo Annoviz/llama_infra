@@ -12,9 +12,14 @@ PARAMETER num_thread 16
 PARAMETER draft_num_predict 2
 
 # Sampling Alignment Settings
-PARAMETER temperature 0.6
+#PARAMETER temperature 0.6
+PARAMETER temperature 0.2
 PARAMETER top_p 0.90
 PARAMETER repeat_penalty 1.1
+
+# Lower the penalty parameters to prevent malformed formatting structures
+PARAMETER presence_penalty 0.0
+PARAMETER frequency_penalty 0.0
 
 
 # DO NOT ADD A SYSTEM PROMPT HERE. Let Claude Code supply its agent framework instructions natively.

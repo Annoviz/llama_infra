@@ -8,7 +8,8 @@ each matched run by (model, prompt).  Two kinds of comparison are performed:
    reference aggregates (mean tokens/s, TTFT, duration, etc.).
 2. **Output consistency** — whether the text output is identical across all
    iterations within a combo, and how similar it is to the reference output
-   (first iteration of the reference combo).
+   (last iteration of each combo — works with both single-iteration baselines
+   and multi-iteration results).
 
 Usage:
   python3 scripts/model_regression.py --reference ref_results.json [current_results.json ...]
@@ -84,7 +85,15 @@ def load_results(path: str) -> dict:
 
 
 def _compute_aggregates_from_records(combo_records: List[Dict[str, Any]]) -> Optional[dict]:
-    """Compute aggregates from a list of per-iteration result records."""
+    """Compute aggregates from a list of per-iteration result records.
+
+    Skips iteration 0 (warmup) to stay compatible with old reg-results.json
+    files that may contain it alongside newer runs where perf_test.py no longer
+    stores the warmup run.
+    """
+    # Filter out warmup iterations (iteration == 0).
+    combo_records = [r for r in combo_records if r.get("iteration", -1) != 0]
+
     if not combo_records:
         return None
 
@@ -128,9 +137,11 @@ def get_aggregates_for_combo(results: List[Dict[str, Any]], model: str, prompt_l
 
 
 def get_raw_texts(results: List[Dict[str, Any]], model: str, prompt_label: str) -> List[str]:
-    """Get raw text outputs for all iterations of a combo."""
+    """Get raw text outputs for all iterations of a combo (skips warmup iteration 0)."""
     texts = []
     for rec in results:
+        if rec.get("iteration", -1) == 0:
+            continue
         if rec.get("model") == model and rec.get("prompt_label") == prompt_label:
             texts.append(rec.get("raw_text", ""))
     return texts
@@ -231,7 +242,9 @@ def compare_output_consistency(reference_data: dict, current_results: List[Dict[
 
     Checks:
       1. Are all iterations producing identical text? (internal consistency)
-      2. Is the first iteration's output similar to the reference's first output? (output drift)
+      2. Is the last measured iteration's output similar to the reference's
+         last iteration output? (output drift — works with both single-iteration
+         baselines and multi-iteration results).
 
     Returns list of ConsistencyFinding objects.
     """
@@ -267,24 +280,26 @@ def compare_output_consistency(reference_data: dict, current_results: List[Dict[
                 severity="warn",
             ))
 
-        # 2. Compare first iteration output against reference first output (if both have text)
-        ref_first = ref_texts[0] if ref_texts else ""
-        curr_first = curr_texts[0] if curr_texts else ""
+        # Compare last iteration output against reference last output.
+        # This works for both single-iteration baselines (last == only) and
+        # multi-iteration results (picks the final measured run).
+        ref_last = ref_texts[-1] if ref_texts else ""
+        curr_last = curr_texts[-1] if curr_texts else ""
 
-        if not ref_first and not curr_first:
+        if not ref_last and not curr_last:
             continue
 
-        if not ref_first or not curr_first:
+        if not ref_last or not curr_last:
             findings.append(ConsistencyFinding(
                 model=model,
                 prompt_label=prompt_label,
                 finding="Output consistency: one run has text, the other is empty",
-                severity="critical" if (ref_first != curr_first) else "ok",
+                severity="critical" if (ref_last != curr_last) else "ok",
             ))
             continue
 
         # Compute similarity ratio using difflib
-        ratio = difflib.SequenceMatcher(None, ref_first, curr_first).ratio()
+        ratio = difflib.SequenceMatcher(None, ref_last, curr_last).ratio()
 
         if ratio < 0.5:
             severity = "critical"
@@ -296,7 +311,7 @@ def compare_output_consistency(reference_data: dict, current_results: List[Dict[
         findings.append(ConsistencyFinding(
             model=model,
             prompt_label=prompt_label,
-            finding=f"Output similarity: {ratio:.1%} match vs reference (first iteration)",
+            finding=f"Output similarity: {ratio:.1%} match vs reference (last iteration)",
             severity=severity,
         ))
 

@@ -21,7 +21,7 @@ Key directories:
 - `tools/update_manager.py` — checks/applies Docker tag and Python package updates
 - `tools/check_agent_docs.py` — validates `.github/agents/*.md` structure
 - `.github/agents/` — Markdown subagent definitions for agent routing
-- `scripts/` — shell scripts (entrypoints, aliases, model build helpers)
+- `scripts/` — shell scripts (entrypoints, aliases, model build helpers, benchmark runner)
 - `tests/` — pytest suite
 
 ## Key Files
@@ -61,7 +61,15 @@ make verify-agent-routing  # Validate agent docs + run unit tests
 
 ### Benchmarking
 ```bash
-make perf-test ARGS="--model planner --iterations 5"   # Run performance tests
+make perf-test ARGS="--model planner --iterations 5"   # Run performance tests (raw)
+
+# Named targets — run benchmark + optional regression comparison:
+make perf-test-planner          # → benchmarks/planner/results.json
+make perf-test-coder            # → benchmarks/coder/results.json
+make fast-coder                 # → benchmarks/fast-coder/results.json
+make perf-test-fast-coder       # two passes for consistency check
+
+# Regression comparison (when reg-results.json exists in output dir):
 python3 scripts/model_regression.py --reference ref.json current.json  # Compare runs
 ```
 
@@ -95,7 +103,7 @@ When routing rules or subagent docs change, run `make verify-agent-routing` befo
 
 ## Memory System
 
-Claude Code session memories are stored in the `llama_infra_memory` FalkorDB graph (MCP server at `http://localhost:3005`). File-based memory (`~/.claude/projects/*/memory/`) is deprecated.
+Claude Code session memories are stored in the `llama_infra_memory` FalkorDB graph (MCP server at `http://localhost:3005`). File-based memory (`~/.claude/projects/*/memory/`) is a fallback.
 
 To query memories:
 ```cypher
@@ -110,3 +118,7 @@ MATCH (m:Memory)-[:RELATED_TO]->(t:Topic) RETURN m, t
 - Preserve environment layering: `.env` -> compose env -> container env.
 - `workspace/requirements.txt` is a frozen snapshot — report-only in automation.
 - Never suggest deleting `./models` without explicit data-loss intent.
+
+## Mode Constraints
+- When the user asks to plan, or when the system is set to plan mode, you are STRICTLY PROHIBITED from modifying files or running edit tools.
+- You must output your execution strategies strictly as text descriptions in the terminal console. Do not proceed to implementation until explicitly told "Go ahead".

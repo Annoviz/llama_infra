@@ -299,7 +299,12 @@ def results_to_dicts(all_results: List[BenchmarkResult], run_id: str,
         agg = compute_aggregates(results)
         prompts_map[(model, plabel)] = None  # placeholder; caller fills
 
+        # Safety net: skip iteration 0 (warmup). Redundant with the collection loop,
+        # but kept for backward compat if old reg-results.json files contain iteration 0 records.
         for idx, result in enumerate(results):
+            if idx == 0:
+                continue
+
             iter_metrics = {k: v for k, v in asdict(result).items() if k != "raw_text"}
             records.append({
                 "run_id": run_id,
@@ -312,6 +317,24 @@ def results_to_dicts(all_results: List[BenchmarkResult], run_id: str,
             })
 
     return records
+
+
+def filter_last_iteration(records: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    """Keep only the last measured iteration per (model, prompt_label) combo.
+
+    Skips warmup iterations (iteration == 0). Useful for regression baselines
+    where a single representative result per combo is sufficient.
+    """
+    # Group by combo preserving insertion order
+    grouped: dict[tuple[str, str], list[Dict[str, Any]]] = {}
+    for rec in records:
+        key = (rec.get("model"), rec.get("prompt_label"))
+        if key not in grouped:
+            grouped[key] = []
+        grouped[key].append(rec)
+
+    # Keep last non-warmup iteration per combo
+    return [grouped[k][-1] for k in sorted(grouped.keys())]
 
 
 def print_json(all_results: List[BenchmarkResult]) -> None:
@@ -351,13 +374,16 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--prompts-file", dest="prompts_file", help="Path to file with one prompt per line (# = comment)")
     parser.add_argument("--model", action="append", dest="models_alt", help="Alternative single model name (repeatable)")
     parser.add_argument("--models", help="Comma-separated list of models")
-    parser.add_argument("--max-tokens", type=int, default=128, help="Max output tokens (default: 128)")
+    parser.add_argument("--max-tokens", type=int, default=2048, help="Max output tokens (default: 2048)")
     parser.add_argument("--iterations", type=int, default=3, help="Iterations per model×prompt combo (default: 3)")
     parser.add_argument("--output", help="Write JSON results to this file")
     parser.add_argument("--output-dir", dest="output_dir", help="Directory for auto-generated results.json (run_id-based)")
     parser.add_argument("--base-url", default=DEFAULT_BASE_URL, help="Ollama base URL (default: http://localhost:11434)")
     parser.add_argument("--timeout", type=int, default=600, help="Per-request timeout in seconds (default: 600)")
     parser.add_argument("--json", action="store_true", help="Output results as JSON to stdout instead of table")
+    parser.add_argument("--save-baseline", dest="save_baseline", action="store_true",
+                        help="Also write baseline.json (last measured iteration per combo, "
+                             "warmup skipped) — for regression baselines")
 
     return parser
 
@@ -442,8 +468,7 @@ def main(argv=None) -> int:
                 file=sys.stderr,
             )
 
-            # Run iterations
-            results_for_combo = []
+            # Run iterations — iteration 0 is a warmup, run it but don't store.
             for i in range(args.iterations):
                 result = run_benchmark(model, prompt, {
                     "base_url": args.base_url,
@@ -451,25 +476,25 @@ def main(argv=None) -> int:
                     "timeout": args.timeout
                 })
                 if result:
-                    results_for_combo.append(result)
-                    print(
-                        f"  iter {i + 1}/{args.iterations}: "
-                        f"{result.output_tokens} tok in {result.total_duration_s:.2f}s "
-                        f"({result.tokens_per_sec:.1f} t/s)",
-                        file=sys.stderr,
-                    )
+                    # Skip warmup iteration (index 0) — store only measured runs.
+                    if i == 0 and args.iterations > 1:
+                        print(
+                            f"  iter {i + 1}/{args.iterations}: [warmup] "
+                            f"{result.output_tokens} tok in {result.total_duration_s:.2f}s "
+                            f"({result.tokens_per_sec:.1f} t/s)",
+                            file=sys.stderr,
+                        )
+                    else:
+                        all_results.append(result)
+                        print(
+                            f"  iter {i + 1}/{args.iterations}: "
+                            f"{result.output_tokens} tok in {result.total_duration_s:.2f}s "
+                            f"({result.tokens_per_sec:.1f} t/s)",
+                            file=sys.stderr,
+                        )
                 else:
                     errors_occurred = True
                     print(f"  iter {i + 1}/{args.iterations}: FAILED", file=sys.stderr)
-
-            # Add to all results
-            all_results.extend(results_for_combo)
-
-    # Output results
-    if args.json or args.output:
-        print_json(all_results)
-    else:
-        print_table(all_results)
 
     # Build structured records with run_id, full prompts, and raw text
     records = results_to_dicts(all_results, run_id, prompt_label_to_text)
@@ -505,6 +530,25 @@ def main(argv=None) -> int:
             }
             with open(results_path, "w") as f:
                 json.dump(output_payload, f, indent=2)
+
+            # Write baseline.json (last measured iteration per combo, warmup skipped).
+            if args.save_baseline:
+                baseline_records = filter_last_iteration(records)
+                baseline_payload = {
+                    "run_id": run_id,
+                    "timestamp": time.strftime("%Y-%m-%dT%H:%M:%S"),
+                    "base_url": args.base_url,
+                    "max_tokens": args.max_tokens,
+                    "iterations": args.iterations,
+                    "models": sorted(models),
+                    "prompts_count": len(prompts),
+                    "results": baseline_records,
+                }
+                baseline_path = os.path.join(args.output_dir, "baseline.json")
+                with open(baseline_path, "w") as f:
+                    json.dump(baseline_payload, f, indent=2)
+                print(f"Baseline written to {baseline_path}", file=sys.stderr)
+
             print(f"\nResults written to {results_path}", file=sys.stderr)
         except Exception as e:
             print(f"Error writing to output directory: {e}", file=sys.stderr)

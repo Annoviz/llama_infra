@@ -69,6 +69,13 @@ help:
 	@printf "Benchmarks:\n"
 	@printf "  make perf-test [ARGS='--model foo --iterations 5']\n"
 	@printf "                        # Run performance tests (pass extra args via ARGS)\n"
+	@printf "\nNamed benchmark targets (with regression comparison):\n"
+	@printf "  make perf-test-planner       # Benchmark planner model   → benchmarks/planner/\n"
+	@printf "  make perf-test-coder         # Benchmark coder model     → benchmarks/coder/\n"
+	@printf "  make perf-test-fast-coder    # Benchmark fast-coder model\n"
+	@printf "                        # Compares against reg-results.json in the output dir.\n"
+	@printf "                        # Warmup is skipped; only last measured run per combo\n"
+	@printf "                        # serves as baseline when no reference exists yet.\n"
 	@printf "\nDiagnostics:\n"
 	@printf "  make config-all          # Render both compose files\n"
 	@printf "  make pull-all            # Pull all pinned images\n"
@@ -280,6 +287,23 @@ gpu-host:
 
 gpu-smoke-llamacpp:
 	docker run --rm --gpus all --entrypoint nvidia-smi $(LLAMA_CPP_IMAGE)
+
+# ── Named benchmark targets ───────────────────────────────────────────────────
+
+# Named benchmark targets — model_flavor is a key (planner/coder/fast-coder),
+# not an Ollama model ID. bench.sh maps it to the correct model.
+
+perf-test-planner:
+	@mkdir -p benchmarks/planner
+	scripts/bench.sh planner --output-dir benchmarks/planner $(ARGS)
+
+perf-test-coder:
+	@mkdir -p benchmarks/coder
+	scripts/bench.sh coder --output-dir benchmarks/coder $(ARGS)
+
+perf-test-fast-coder:
+	@mkdir -p benchmarks/perf-test-fast-coder
+	scripts/bench.sh fast-coder --output-dir benchmarks/perf-test-fast-coder $(ARGS)
 
 clean:
 	@find . -maxdepth 1 -type f \( -name 'compose_*.txt' -o -name '*_checks.json' -o -name 'verification_report.json' \) -print -delete
