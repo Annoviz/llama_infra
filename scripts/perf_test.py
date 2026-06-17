@@ -299,12 +299,9 @@ def results_to_dicts(all_results: List[BenchmarkResult], run_id: str,
         agg = compute_aggregates(results)
         prompts_map[(model, plabel)] = None  # placeholder; caller fills
 
-        # Safety net: skip iteration 0 (warmup). Redundant with the collection loop,
-        # but kept for backward compat if old reg-results.json files contain iteration 0 records.
-        for idx, result in enumerate(results):
-            if idx == 0:
-                continue
-
+        # Warmup was already filtered out in the collection loop (main), so all
+        # items here are measured runs. No need to skip idx == 0 again.
+        for result in results:
             iter_metrics = {k: v for k, v in asdict(result).items() if k != "raw_text"}
             records.append({
                 "run_id": run_id,
