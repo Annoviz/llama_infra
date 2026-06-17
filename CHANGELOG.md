@@ -1,4 +1,35 @@
 # Docker Image Update Changelog - March 26, 2026
+## Docker Image Updates - June 17, 2026
+
+**Note:** Each update was manually approved by the user via interactive prompt.
+
+
+### Updated Docker Images
+
+- **ollama/ollama**: `0.30.8` → `0.30.9`
+- **mintplexlabs/anythingllm**: `1.12.1` → `1.14.1`
+- **falkordb/falkordb**: `v4.18.9` → `v4.18.10`
+
+### Updated Python Packages
+
+- **llama-cpp-python[server]**: `0.3.23` → `0.3.30`
+- **jupyter-server**: `2.18.0` → `2.20.0`
+- **notebook**: `7.5.6` → `7.5.7`
+- **aiohttp**: `3.13.4` → `3.14.1`
+- **uvicorn**: `0.47.0` → `0.49.0`
+- **fastapi**: `0.136.1` → `0.137.1`
+- **pytest**: `7.0.0` → `9.1.0`
+- **pytest-asyncio**: `0.20.0` → `1.4.0`
+- **pytest-cov**: `3.0.0` → `7.1.0`
+- **pytest-mock**: `3.0.0` → `3.15.1`
+- **pytest-xdist**: `3.0.0` → `3.8.0`
+- **hypothesis**: `6.0.0` → `6.155.3`
+- **pre-commit**: `4.0.0` → `4.6.0`
+- **ruff**: `0.6.0` → `0.15.17`
+- **black**: `24.0.0` → `26.5.1`
+
+---
+
 
 ## Unsloth Optional Service - June 10, 2026
 

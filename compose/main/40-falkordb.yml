@@ -1,6 +1,6 @@
 services:
   falkordb:
-    image: falkordb/falkordb:${FALKORDB_VERSION:-v4.18.9}
+    image: falkordb/falkordb:${FALKORDB_VERSION:-v4.18.10}
     container_name: falkordb
     restart: unless-stopped
     ports:
