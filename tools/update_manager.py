@@ -18,6 +18,7 @@ import difflib
 import json
 import re
 import sys
+from datetime import datetime
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Dict, Iterable, List, Optional, Sequence, Tuple
@@ -29,6 +30,9 @@ DEFAULT_PROPOSAL = ROOT / ".update-manager-proposal.json"
 DOCKER_COMPOSE_OLLAMA = ROOT / "compose/main/10-ollama.yml"
 DOCKER_COMPOSE_ANYTHING = ROOT / "compose/main/20-anythingllm.yml"
 DOCKER_COMPOSE_OPENWEBUI = ROOT / "compose/main/30-open-webui.yml"
+DOCKER_COMPOSE_FALKORDB = ROOT / "compose/main/40-falkordb.yml"
+DOCKER_COMPOSE_FALKORDB_MCP = ROOT / "compose/main/50-falkordb-mcp.yml"
+DOCKER_COMPOSE_UNSLOTH = ROOT / "compose/main/60-unsloth.yml"
 DOCKER_COMPOSE_LLAMA = ROOT / "docker-compose.llama.cpp.yml"
 DOCKERFILE_LLAMA_PY = ROOT / "compose/llama/Dockerfile.llamacpp-server-python"
 REQ_DEV = ROOT / "requirements-dev.txt"
@@ -152,11 +156,17 @@ def discover_docker_updates() -> List[UpdateItem]:
     ollama_text = DOCKER_COMPOSE_OLLAMA.read_text(encoding="utf-8")
     anything_text = DOCKER_COMPOSE_ANYTHING.read_text(encoding="utf-8")
     openwebui_text = DOCKER_COMPOSE_OPENWEBUI.read_text(encoding="utf-8")
+    falkordb_text = DOCKER_COMPOSE_FALKORDB.read_text(encoding="utf-8")
+    falkordb_mcp_text = DOCKER_COMPOSE_FALKORDB_MCP.read_text(encoding="utf-8")
+    unsloth_text = DOCKER_COMPOSE_UNSLOTH.read_text(encoding="utf-8")
     llama_text = DOCKER_COMPOSE_LLAMA.read_text(encoding="utf-8")
 
     current_ollama = re.search(r"\$\{OLLAMA_VERSION:-([^}]+)\}", ollama_text)
     current_anything = re.search(r"\$\{ANYTHINGLLM_VERSION:-([^}]+)\}", anything_text)
     current_openwebui = re.search(r"\$\{OW_VERSION:-([^}]+)\}", openwebui_text)
+    current_falkordb = re.search(r"\$\{FALKORDB_VERSION:-([^}]+)\}", falkordb_text)
+    current_falkordb_mcp = re.search(r"\$\{FALKORDB_MCP_VERSION:-([^}]+)\}", falkordb_mcp_text)
+    current_unsloth = re.search(r"\$\{UNSLOTH_VERSION:-([^}]+)\}", unsloth_text)
     current_llama_image = re.search(
         r"\$\{IMAGE:-ghcr\.io/ggml-org/llama\.cpp:([^}]+)\}", llama_text
     )
@@ -217,6 +227,60 @@ def discover_docker_updates() -> List[UpdateItem]:
                     latest=latest,
                     applyable=is_newer(latest, current_openwebui.group(1)),
                     reason="GHCR tag",
+                )
+            )
+
+    if current_falkordb:
+        try:
+            latest = latest_tag(docker_hub_tags("falkordb/falkordb"), r"^v?\d+(\.\d+){1,3}$")
+        except (error.HTTPError, error.URLError):
+            latest = None
+        if latest:
+            items.append(
+                UpdateItem(
+                    kind="docker",
+                    name="falkordb/falkordb",
+                    source_file=DOCKER_COMPOSE_FALKORDB,
+                    current=current_falkordb.group(1),
+                    latest=latest,
+                    applyable=is_newer(latest, current_falkordb.group(1)),
+                    reason="Docker Hub tag",
+                )
+            )
+
+    if current_falkordb_mcp:
+        try:
+            latest = latest_tag(docker_hub_tags("falkordb/mcpserver"), r"^\d+(\.\d+){1,3}$")
+        except (error.HTTPError, error.URLError):
+            latest = None
+        if latest:
+            items.append(
+                UpdateItem(
+                    kind="docker",
+                    name="falkordb/mcpserver",
+                    source_file=DOCKER_COMPOSE_FALKORDB_MCP,
+                    current=current_falkordb_mcp.group(1),
+                    latest=latest,
+                    applyable=is_newer(latest, current_falkordb_mcp.group(1)),
+                    reason="Docker Hub tag",
+                )
+            )
+
+    if current_unsloth:
+        try:
+            latest = latest_tag(docker_hub_tags("unsloth/unsloth"), r"^[0-9]+\.[0-9]+\.[0-9]+.*$")
+        except (error.HTTPError, error.URLError):
+            latest = None
+        if latest:
+            items.append(
+                UpdateItem(
+                    kind="docker",
+                    name="unsloth/unsloth",
+                    source_file=DOCKER_COMPOSE_UNSLOTH,
+                    current=current_unsloth.group(1),
+                    latest=latest,
+                    applyable=is_newer(latest, current_unsloth.group(1)),
+                    reason="Docker Hub tag",
                 )
             )
 
@@ -342,6 +406,30 @@ def build_replacements(items: Sequence[UpdateItem]) -> List[Replacement]:
                     source_file=DOCKER_COMPOSE_OPENWEBUI,
                     old=r"${OW_VERSION:-" + item.current + "}",
                     new=r"${OW_VERSION:-" + item.latest + "}",
+                )
+            )
+        elif item.name == "falkordb/falkordb":
+            replacements.append(
+                Replacement(
+                    source_file=DOCKER_COMPOSE_FALKORDB,
+                    old=r"${FALKORDB_VERSION:-" + item.current + "}",
+                    new=r"${FALKORDB_VERSION:-" + item.latest + "}",
+                )
+            )
+        elif item.name == "falkordb/mcpserver":
+            replacements.append(
+                Replacement(
+                    source_file=DOCKER_COMPOSE_FALKORDB_MCP,
+                    old=r"${FALKORDB_MCP_VERSION:-" + item.current + "}",
+                    new=r"${FALKORDB_MCP_VERSION:-" + item.latest + "}",
+                )
+            )
+        elif item.name == "unsloth/unsloth":
+            replacements.append(
+                Replacement(
+                    source_file=DOCKER_COMPOSE_UNSLOTH,
+                    old=r"${UNSLOTH_VERSION:-" + item.current + "}",
+                    new=r"${UNSLOTH_VERSION:-" + item.latest + "}",
                 )
             )
         elif item.name == "ghcr.io/ggml-org/llama.cpp:full-cuda-b*":
@@ -476,6 +564,75 @@ def write_proposal(path: Path, items: Sequence[UpdateItem]) -> None:
     print(f"Wrote proposal: {path}")
 
 
+def generate_changelog_entry(items: Sequence[UpdateItem]) -> str:
+    """Generate a changelog entry for Docker image version bumps."""
+    from datetime import datetime
+
+    today = datetime.now().strftime("%B %d, %Y")
+
+    lines = []
+    lines.append(f"## Docker Image Updates - {today}\n")
+    lines.append("**Note:** Each update was manually approved by the user via interactive prompt.\n")
+    lines.append("")
+
+    docker_items = [i for i in items if i.kind == "docker" and i.applyable]
+    python_items = [i for i in items if i.kind == "python" and i.applyable]
+
+    if docker_items:
+        lines.append("### Updated Docker Images\n")
+        for item in docker_items:
+            lines.append(f"- **{item.name}**: `{item.current}` → `{item.latest}`")
+        lines.append("")
+
+    if python_items:
+        lines.append("### Updated Python Packages\n")
+        for item in python_items:
+            lines.append(f"- **{item.name}**: `{item.current}` → `{item.latest}`")
+        lines.append("")
+
+    lines.append("---\n")
+    return "\n".join(lines)
+
+
+def update_changelog(items: Sequence[UpdateItem]) -> None:
+    """Add a changelog entry for the updates."""
+    changelog_path = ROOT / "CHANGELOG.md"
+    entry = generate_changelog_entry(items)
+
+    if not changelog_path.exists():
+        print(f"Warning: CHANGELOG.md not found at {changelog_path}")
+        return
+
+    # Read existing content
+    original = changelog_path.read_text(encoding="utf-8")
+
+    # Check if we already have an entry for today
+    today_pattern = datetime.now().strftime("%B %d, %Y")
+    if f"## Docker Image Updates - {today_pattern}" in original:
+        # Update existing entry - insert before the next section
+        lines = original.split("\n")
+        insert_idx = None
+        for i, line in enumerate(lines):
+            if line.startswith("## ") and f"Docker Image Updates - {today_pattern}" not in line:
+                insert_idx = i
+                break
+        if insert_idx is None:
+            insert_idx = len(lines)
+
+        lines.insert(insert_idx, entry.rstrip())
+        new_content = "\n".join(lines)
+    else:
+        # Insert after the header but before the first section
+        lines = original.split("\n")
+        insert_idx = 1 if lines[0].startswith("#") else 0
+        lines.insert(insert_idx, entry)
+        new_content = "\n".join(lines)
+
+    if new_content != original:
+        changelog_path.write_text(new_content, encoding="utf-8")
+        print(f"Updated CHANGELOG.md")
+
+
 def interactive_confirm() -> bool:
     answer = input("Apply these updates? [y/N]: ").strip().lower()
     return answer in {"y", "yes"}
@@ -518,6 +675,8 @@ def run_apply(args: argparse.Namespace) -> int:
     updated = apply_replacements(preview_only=False, replacements=replacements)
     if updated:
         print(f"Applied updates to {len(updated)} file(s).")
+        # Update changelog with the updates
+        update_changelog(to_apply)
     else:
         print("Nothing changed after replacement pass.")
     return 0
