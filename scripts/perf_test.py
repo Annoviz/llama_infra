@@ -75,8 +75,39 @@ def prompt_label(prompt: str, max_len: int = 28) -> str:
     """
     text = " ".join(prompt.split())
     if len(text) > max_len:
-        return text[:max_len - 1] + "…"
+        return text[: max_len - 1] + "…"
     return text
+
+
+def unique_prompt_label(prompt: str, seen_labels: set, max_len: int = 28) -> str:
+    """Return a unique label for a prompt string, handling collisions.
+
+    If truncation would cause a collision (same label as another prompt),
+    appends a short hash to make it unique while keeping it readable.
+
+    Args:
+        prompt: The original prompt text
+        seen_labels: Set of labels already used (modified in place)
+        max_len: Maximum length before truncation
+
+    Returns:
+        A unique label string
+    """
+    base_label = prompt_label(prompt, max_len)
+
+    if base_label not in seen_labels:
+        seen_labels.add(base_label)
+        return base_label
+
+    # Collision detected - append short hash for uniqueness
+    # Use first 4 chars of MD5 hash
+    hash_suffix = hashlib.md5(prompt.encode()).hexdigest()[:4]
+    # Reduce max_len to accommodate the hash suffix
+    trunc_len = max_len - len(hash_suffix) - 1  # -1 for separator
+    base_label = prompt_label(prompt, trunc_len)
+    unique_label = f"{base_label}-{hash_suffix}"
+    seen_labels.add(unique_label)
+    return unique_label
 
 
 @dataclass
@@ -169,12 +200,14 @@ def run_benchmark(model: str, prompt: str, config: dict) -> Optional[BenchmarkRe
                     input_tokens = chunk["prompt_eval_count"]
                 if "eval_count" in chunk:
                     output_tokens = chunk["eval_count"]
-                if "eval_duration" in chunk and "eval_count" in chunk:
-                    eval_duration_s = chunk["eval_duration"] / 1e9
-                    if eval_duration_s > 0:
-                        tokens_per_sec = chunk["eval_count"] / eval_duration_s
 
         total_duration_s = time.time() - start_time
+
+        # Calculate tokens per second using full request duration.
+        # Ollama's eval_duration is per-chunk and may not represent the full
+        # generation time accurately; total_duration_s gives the true throughput.
+        if output_tokens > 0 and total_duration_s > 0:
+            tokens_per_sec = output_tokens / total_duration_s
 
         # Guard against empty response (no chunks emitted at all)
         if not first_chunk_seen:

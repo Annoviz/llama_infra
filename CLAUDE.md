@@ -22,7 +22,7 @@ Key directories:
 - `tools/check_agent_docs.py` — validates `.github/agents/*.md` structure
 - `.github/agents/` — Markdown subagent definitions for agent routing
 - `scripts/` — shell scripts (entrypoints, aliases, model build helpers, benchmark runner)
-- `tests/` — pytest suite
+- `tests/` — pytest suite with 55 tests and 63% coverage
 
 ## Key Files
 
@@ -32,6 +32,7 @@ Key directories:
 - `.env` — environment overrides (models path, data dir, GPU ID, registry)
 - `requirements-dev.txt` — editable dev dependency source
 - `requirements-client.txt` — pinned client deps (frozen snapshot in `workspace/requirements.txt`)
+- `tests/conftest.py` — shared pytest fixtures
 
 ## Common Commands
 
@@ -81,9 +82,16 @@ make updates-apply      # Interactive diff + apply
 ```
 
 ### Tests
+
 ```bash
-python3 -m pytest -q tests/
+# Run all tests (requires conda environment)
+conda run -n llama_infra python3 -m pytest -v tests/
+
+# Run with coverage
+conda run -n llama_infra python3 -m pytest --cov=. --cov-report=term-missing tests/
 ```
+
+See [docs/operations.md](docs/operations.md) for test structure and writing tests.
 
 ## Agent Routing
 

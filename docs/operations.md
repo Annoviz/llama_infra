@@ -139,3 +139,41 @@ make verify-agent-routing
 # refresh pinned hook revisions
 make precommit-update
 ```
+
+## Testing
+
+The project uses pytest for unit and integration testing.
+
+### Running tests
+
+```bash
+# Run all tests (requires conda environment)
+conda run -n llama_infra python3 -m pytest -v tests/
+
+# Run with coverage
+conda run -n llama_infra python3 -m pytest --cov=. --cov-report=term-missing tests/
+
+# Run specific test file
+conda run -n llama_infra python3 -m pytest tests/test_perf_test.py
+```
+
+### Test structure
+
+| File | Purpose |
+|------|---------|
+| `tests/test_agent_docs_check.py` | Validates `.github/agents/*.md` heading contract |
+| `tests/test_perf_test.py` | Tests for benchmark result processing and formatting |
+| `tests/test_update_manager.py` | Tests for Docker tag and PyPI version updates |
+
+### Test coverage
+
+- **Helper functions**: 100% coverage (e.g., `prompt_label`, `compute_aggregates`)
+- **Network-dependent code**: Mocked tests for `update_manager` network calls
+- **Integration tests**: Mock Ollama server for `run_benchmark` flow
+
+### Writing tests
+
+- Use `pytest-mock` for mocking network calls (`mocker` fixture)
+- Use parametrized tests for edge cases (`@pytest.mark.parametrize`)
+- Use `pytest-asyncio` for async integration tests
+- Shared fixtures in `tests/conftest.py` (temp_dir, mock_agent_files, sample_benchmark_results)
