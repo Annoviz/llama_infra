@@ -300,14 +300,14 @@ def results_to_dicts(all_results: List[BenchmarkResult], run_id: str,
         prompts_map[(model, plabel)] = None  # placeholder; caller fills
 
         # Warmup was already filtered out in the collection loop (main), so all
-        # items here are measured runs. No need to skip idx == 0 again.
-        for result in results:
+        # items here are measured runs. Assign sequential iteration indices.
+        for iter_idx, result in enumerate(results):
             iter_metrics = {k: v for k, v in asdict(result).items() if k != "raw_text"}
             records.append({
                 "run_id": run_id,
                 "model": model,
                 "prompt_label": plabel,
-                "iteration": idx,
+                "iteration": iter_idx + 1,
                 "raw_text": result.raw_text,
                 "metrics": iter_metrics,
                 "aggregates": {k: v for k, v in agg.items() if k != "iterations"},
