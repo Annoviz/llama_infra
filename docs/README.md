@@ -22,6 +22,10 @@ Each service has a dedicated doc with its project URL, description, compose file
 
 - [docs/versioning.md](versioning.md) — Pinned image defaults, safe update workflow, final verification checklist
 
+## Scripts
+
+- [docs/scripts/README.md](scripts/README.md) - Documentation for all scripts in `scripts/` and `tools/`
+
 ## Agents
 
 - [AGENTS.md](../AGENTS.md) — Copilot subagents, routing modes, routing rules, and examples (canonical orchestrator file)
