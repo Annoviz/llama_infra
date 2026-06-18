@@ -31,25 +31,31 @@ COMPOSE_MAIN := docker compose --project-directory $(CURDIR) \
 COMPOSE_LLAMA := docker compose --project-directory $(CURDIR) -f docker-compose.llama.cpp.yml
 LLAMA_CPP_IMAGE ?= ghcr.io/ggml-org/llama.cpp:full-cuda-b5350
 
-.PHONY: help \
+.PHONY: help help-verbose \
 	config-main config-falkor config-llama config-all \
-	config-unsloth \
-	pull-main pull-falkor pull-unsloth pull-llama pull-all \
-	build-llamacpp-py models-sync \
+	config-unsloth config-open-webui \
+	pull-main pull-ollama pull-open-webui pull-falkor pull-falkordb pull-falkordb-mcp pull-unsloth pull-llama pull-all \
+	build-llamacpp build-llamacpp-py models-sync \
 	updates-check updates-suggest updates-apply \
 	check-agent-docs verify-agent-routing check-doc-links \
 	precommit-install precommit-run precommit-update \
 	up-ollama up-anythingllm up-open-webui up-main up-falkordb up-falkordb-mcp up-unsloth up-main-all \
 	up-llamacpp up-llamacpp-py up-llama \
-	down-main down-falkor down-unsloth down-llama down-all \
+	down-main down-falkor down-falkordb down-falkordb-mcp down-unsloth down-llama down-all \
 	restart-ollama restart-anythingllm restart-open-webui restart-falkordb restart-falkordb-mcp restart-unsloth restart-llamacpp restart-llamacpp-py \
-	logs-ollama logs-anythingllm logs-open-webui logs-falkordb logs-falkordb-mcp logs-unsloth logs-llamacpp logs-llamacpp-py \
-	ps-main ps-falkor ps-unsloth ps-llama ps-all \
-	gpu-host gpu-smoke-llamacpp perf-test clean
+	logs-ollama logs-anythingllm logs-open-webui logs-falkordb logs-falkordb-mcp logs-unsloth logs-llamacpp logs-llamacpp-py logs-all \
+	ps-main ps-falkor ps-falkordb ps-falkordb-mcp ps-unsloth ps-llama ps-all \
+	gpu-host gpu-smoke-llamacpp perf-test clean prune
 
 help:
 	@printf "\nllama_infra utility targets\n\n"
 	@printf "Main stack:\n"
+
+help-verbose:
+	@printf "\nllama_infra utility targets\n\n"
+	@printf "Main stack:\n"
+	@printf "  make pull-ollama         # Pull Ollama image\n"
+	@printf "  make pull-open-webui     # Pull Open WebUI image\n"
 	@printf "  make up-ollama           # Start Ollama only\n"
 	@printf "  make up-anythingllm      # Start AnythingLLM (and Ollama dependency)\n"
 	@printf "  make up-open-webui       # Start Open WebUI (and Ollama dependency)\n"
@@ -59,14 +65,17 @@ help:
 	@printf "  make up-unsloth          # Start Unsloth container (GPU + Jupyter/API)\n"
 	@printf "  make up-main-all         # Start core stack + FalkorDB + FalkorDB MCP\n"
 	@printf "  make down-main           # Stop the main stack\n"
+	@printf "  make down-falkordb       # Stop FalkorDB only\n"
+	@printf "  make down-falkordb-mcp   # Stop FalkorDB MCP only\n"
 	@printf "  make down-falkor         # Stop FalkorDB + MCP stack\n"
 	@printf "  make down-unsloth        # Stop Unsloth stack\n"
 	@printf "\nllama.cpp stack:\n"
 	@printf "  make up-llamacpp         # Start the native llama.cpp server\n"
+	@printf "  make build-llamacpp      # Build the native llama.cpp server image\n"
 	@printf "  make build-llamacpp-py   # Build the python llama-cpp server image\n"
 	@printf "  make up-llamacpp-py      # Start the python llama-cpp server\n"
 	@printf "  make down-llama          # Stop the llama.cpp stack\n"
-	@printf "Benchmarks:\n"
+	@printf "\nBenchmarks:\n"
 	@printf "  make perf-test [ARGS='--model foo --iterations 5']\n"
 	@printf "                        # Run performance tests (pass extra args via ARGS)\n"
 	@printf "\nNamed benchmark targets (with regression comparison):\n"
@@ -79,9 +88,12 @@ help:
 	@printf "\nDiagnostics:\n"
 	@printf "  make config-all          # Render both compose files\n"
 	@printf "  make pull-all            # Pull all pinned images\n"
+	@printf "  make ps-falkordb         # Show FalkorDB container status\n"
+	@printf "  make ps-falkordb-mcp     # Show FalkorDB MCP container status\n"
 	@printf "  make ps-unsloth          # Show Unsloth container status\n"
-	@printf "  make models-sync         # Sync models from workspace/models/models-config.yaml inside ollama-server\n"
 	@printf "  make ps-all              # Show running containers in both stacks\n"
+	@printf "  make logs-all            # Tail logs from all containers\n"
+	@printf "  make models-sync         # Sync models from workspace/models/models-config.yaml inside ollama-server\n"
 	@printf "  make gpu-host            # Show host NVIDIA status\n"
 	@printf "  make gpu-smoke-llamacpp  # Run a CUDA image smoke test with nvidia-smi\n"
 	@printf "\nUpdate manager:\n"
@@ -95,18 +107,27 @@ help:
 	@printf "  make precommit-install   # Install pre-commit git hooks\n"
 	@printf "  make precommit-run       # Run all pre-commit hooks on all files\n"
 	@printf "  make precommit-update    # Update pinned hook revisions in .pre-commit-config.yaml\n"
+	@printf "\nCleanup:\n"
+	@printf "  make clean               # Remove temporary files\n"
+	@printf "  make prune               # Prune Docker system and volumes\n"
 	@printf "\nOverride examples:\n"
 	@printf "  OLLAMA_VERSION=0.18.2 make config-main\n"
 	@printf "  UNSLOTH_VERSION=2026.5.9-pt2.10.0-vllm-0.16.0-cu12.8-studio-release-v0.1.43-beta-2026-MAY-31 make pull-unsloth\n"
 	@printf "  IMAGE=ghcr.io/ggml-org/llama.cpp:full-cuda-b5343 make config-llama\n"
 	@printf "  LLAMA_CPP_VERSION=0.3.18 REQUIREMENTS_FILE=requirements-dev.txt make build-llamacpp-py\n\n"
-	@{ \
-		printed=0; \
-		if [ -n "$(DATA_DIR)" ]; then [ $$printed -eq 0 ] && printf "Detected environment:\n" && printed=1; printf "  DATA_DIR=%s\n" "$(DATA_DIR)"; fi; \
-		if [ -n "$(REGISTRY)" ]; then [ $$printed -eq 0 ] && printf "Detected environment:\n" && printed=1; printf "  REGISTRY=%s\n" "$(REGISTRY)"; fi; \
-		if [ -n "$(LLAMA_INFRA_DIR)" ]; then [ $$printed -eq 0 ] && printf "Detected environment:\n" && printed=1; printf "  LLAMA_INFRA_DIR=%s\n" "$(LLAMA_INFRA_DIR)"; fi; \
-		[ $$printed -eq 1 ] && printf "\n" || true; \
-	}
+	@printf "Environment variables (set in .env):\n"
+	@printf "  OLLAMA_VERSION         : 0.30.9\n"
+	@printf "  ANYTHINGLLM_VERSION    : 1.14.1\n"
+	@printf "  OW_VERSION             : v0.8.11\n"
+	@printf "  FALKORDB_VERSION       : v4.18.10\n"
+	@printf "  FALKORDB_MCP_VERSION   : 1.2.2\n"
+	@printf "  UNSLOTH_VERSION        : 2026.5.9-pt2.10.0-vllm-0.16.0-cu12.8-studio-release-v0.1.43-beta-2026-MAY-31\n"
+	@printf "  IMAGE                  : ghcr.io/ggml-org/llama.cpp:full-cuda-b5350\n"
+	@printf "  LLAMA_CPP_VERSION      : 0.3.30\n"
+	@printf "  DATA_DIR               : ./data\n"
+	@printf "  REGISTRY               : llamacpp-server-python\n"
+	@printf "  GPU_ID                 : 0\n"
+	@printf "  MODELS                 : ./models\n"
 
 config-main:
 	$(COMPOSE_CORE) config
@@ -120,21 +141,42 @@ config-unsloth:
 config-llama:
 	$(COMPOSE_LLAMA) config
 
-config-all: config-main config-falkor config-unsloth config-llama
+config-open-webui:
+	$(COMPOSE_CORE) config open-webui
+
+config-all: config-main config-falkor config-unsloth config-llama config-open-webui
 
 pull-main:
 	$(COMPOSE_CORE) pull
 
+pull-ollama:
+	$(COMPOSE_OLLAMA) pull
+
+pull-open-webui:
+	$(COMPOSE_CORE) pull open-webui
+
+pull-falkordb:
+	$(COMPOSE_FALKOR) pull falkordb
+
+pull-falkordb-mcp:
+	$(COMPOSE_FALKOR) pull falkordb-mcpserver
+
 pull-falkor:
 	$(COMPOSE_FALKOR) pull
-
-pull-unsloth:
-	$(COMPOSE_UNSLOTH) pull
 
 pull-llama:
 	$(COMPOSE_LLAMA) pull llamacpp-server
 
-pull-all: pull-main pull-falkor pull-unsloth pull-llama
+pull-llamacpp:
+	$(COMPOSE_LLAMA) pull llamacpp-server
+
+pull-llamacpp-py:
+	$(COMPOSE_LLAMA) pull llamacpp-server-py
+
+pull-all: pull-main pull-falkor pull-unsloth pull-llama pull-open-webui
+
+build-llamacpp:
+	$(COMPOSE_LLAMA) build llamacpp-server
 
 build-llamacpp-py:
 	$(COMPOSE_LLAMA) build llamacpp-server-py
@@ -205,6 +247,12 @@ up-llama:
 down-main:
 	$(COMPOSE_CORE) down
 
+down-falkordb:
+	$(COMPOSE_FALKOR) down falkordb
+
+down-falkordb-mcp:
+	$(COMPOSE_FALKOR) down falkordb-mcpserver
+
 down-falkor:
 	$(COMPOSE_FALKOR) down
 
@@ -214,7 +262,7 @@ down-unsloth:
 down-llama:
 	$(COMPOSE_LLAMA) down
 
-down-all: down-main down-falkor down-llama
+down-all: down-main down-falkordb down-falkordb-mcp down-unsloth down-llama
 
 restart-ollama:
 	$(COMPOSE_CORE) restart ollama-server
@@ -267,6 +315,12 @@ logs-llamacpp-py:
 ps-main:
 	$(COMPOSE_CORE) ps
 
+ps-falkordb:
+	$(COMPOSE_FALKOR) ps falkordb
+
+ps-falkordb-mcp:
+	$(COMPOSE_FALKOR) ps falkordb-mcpserver
+
 ps-falkor:
 	$(COMPOSE_FALKOR) ps
 
@@ -276,7 +330,12 @@ ps-unsloth:
 ps-llama:
 	$(COMPOSE_LLAMA) ps
 
-ps-all: ps-main ps-falkor ps-unsloth ps-llama
+ps-all: ps-main ps-falkordb ps-falkordb-mcp ps-unsloth ps-llama
+
+logs-all:
+	@printf "Tailing logs from all containers...\n"
+	$(COMPOSE_MAIN) logs -f --tail=100 2>/dev/null || true
+	$(COMPOSE_LLAMA) logs -f --tail=100 2>/dev/null || true
 
 perf-test:
 	@echo "Running performance tests..." >&2
@@ -307,3 +366,8 @@ perf-test-fast-coder:
 
 clean:
 	@find . -maxdepth 1 -type f \( -name 'compose_*.txt' -o -name '*_checks.json' -o -name 'verification_report.json' \) -print -delete
+
+prune:
+	@printf "Pruning Docker system...\n"
+	docker system prune -f
+	docker volume prune -f
