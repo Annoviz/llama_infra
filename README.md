@@ -36,7 +36,7 @@ General stack orchestration:
 - Top-level commands and shortcuts: [Makefile](Makefile) (`make help`)
 - Version pinning and update workflow: [docs/versioning.md](docs/versioning.md)
 - Operations guide (client setup, extra workflows, model config, update manager, code quality): [docs/operations.md](docs/operations.md)
-- Copilot subagents and routing guide: [AGENTS.md](AGENTS.md)
+- Subagents and routing rules: [AGENTS.md](AGENTS.md)
 
 # Contact
 * Author: Dima Kanevsky

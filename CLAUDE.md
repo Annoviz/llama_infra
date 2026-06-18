@@ -95,17 +95,7 @@ See [docs/operations.md](docs/operations.md) for test structure and writing test
 
 ## Agent Routing
 
-Subagents live in `.github/agents/*.md`. Routing rules (keyword scoring, tie-breaks, fallback) are in `AGENTS.md`.
-
-| Agent | Purpose | Key triggers |
-|---|---|---|
-| `docker-ops-agent` | Docker stack lifecycle, logs, GPU checks | `make up-*`, `logs-`, `ps-*`, `gpu`, `compose` |
-| `model-config-agent` | Model JSON configs, GGUF/mmproj wiring | `LLM_CONFIG`, `GGUF`, `mmproj`, `model_alias` |
-| `update-manager-agent` | Docker tag and Python dependency updates | `updates-check`, `updates-apply`, `requirements-dev` |
-| `docs-sync-agent` | README/CHANGELOG alignment | `README`, `CHANGELOG`, `sync`, `document` |
-| `coding-agent` | Feature implementation, refactors, bug fixes | `implement`, `feature`, `refactor`, `fix bug` |
-| `reviewer-agent` | Code review, regression risk, missing tests | `review`, `audit`, `risk`, `regression` |
-| `commit-agent` | Git commit and push workflows | `commit`, `push`, `stage all` |
+Subagents live in `.github/agents/*.md`. Routing rules (keyword scoring, tie-breaks, fallback) and complete subagent definitions are in [AGENTS.md](AGENTS.md).
 
 When routing rules or subagent docs change, run `make verify-agent-routing` before handoff.
 

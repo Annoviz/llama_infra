@@ -197,7 +197,7 @@ check-agent-docs:
 	python3 tools/check_agent_docs.py
 
 verify-agent-routing: check-agent-docs
-	python3 -m pytest -q tests/test_agent_docs_check.py
+	conda run -n llama_infra python3 -m pytest -q tests/test_agent_docs_check.py
 
 check-doc-links:
 	python3 tools/check_doc_links.py
