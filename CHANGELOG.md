@@ -1,4 +1,28 @@
 # Docker Image Update Changelog - March 26, 2026
+## Docker Image Updates - June 27, 2026
+
+**Note:** Each update was manually approved by the user via interactive prompt.
+
+
+### Updated Docker Images
+
+- **ollama/ollama**: `0.30.9` → `0.30.11`
+- **mintplexlabs/anythingllm**: `1.14.1` → `1.15.0`
+- **falkordb/falkordb**: `v4.18.10` → `v4.18.11`
+
+### Updated Python Packages
+
+- **llama-cpp-python[server]**: `0.3.30` → `0.3.31`
+- **notebook**: `7.5.7` → `7.6.0`
+- **fastapi**: `0.137.1` → `0.138.1`
+- **pydantic-settings**: `2.14.1` → `2.14.2`
+- **sse-starlette**: `3.4.4` → `3.4.5`
+- **pytest**: `9.1.0` → `9.1.1`
+- **hypothesis**: `6.155.3` → `6.155.7`
+- **ruff**: `0.15.17` → `0.15.20`
+
+---
+
 ## Docker Image Updates - June 17, 2026
 
 **Note:** Each update was manually approved by the user via interactive prompt.

@@ -4,7 +4,8 @@ FROM hf.co/unsloth/Qwen3.6-35B-A3B-MTP-GGUF:Qwen3.6-35B-A3B-UD-Q6_K.gguf
 # Hardware Allocations for RTX 6000 Ada
 PARAMETER num_gpu 99
 #PARAMETER num_ctx 32768
-PARAMETER num_ctx 65536
+#PARAMETER num_ctx 65536
+PARAMETER num_ctx 131072
 PARAMETER num_predict 8192
 PARAMETER num_thread 16
 
