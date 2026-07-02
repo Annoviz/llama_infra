@@ -1,6 +1,6 @@
 services:
   falkordb-mcpserver:
-    image: falkordb/mcpserver:${FALKORDB_MCP_VERSION:-1.2.2}
+    image: falkordb/mcpserver:${FALKORDB_MCP_VERSION:-1.3.0}
     container_name: falkordb-mcpserver
     restart: unless-stopped
     ports:

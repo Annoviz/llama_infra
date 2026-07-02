@@ -1,4 +1,21 @@
 # Docker Image Update Changelog - March 26, 2026
+## Docker Image Updates - July 02, 2026
+
+**Note:** Each update was manually approved by the user via interactive prompt.
+
+
+### Updated Docker Images
+
+- **ollama/ollama**: `0.30.11` → `0.31.1`
+- **falkordb/mcpserver**: `1.2.2` → `1.3.0`
+
+### Updated Python Packages
+
+- **llama-cpp-python[server]**: `0.3.31` → `0.3.32`
+- **fastapi**: `0.138.1` → `0.139.0`
+
+---
+
 ## Docker Image Updates - June 27, 2026
 
 **Note:** Each update was manually approved by the user via interactive prompt.
