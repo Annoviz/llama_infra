@@ -1,0 +1,20 @@
+FROM hf.co/unsloth/Qwen3-4B-Thinking-2507-GGUF:Qwen3-4B-Thinking-2507-UD-Q4_K_XL.gguf
+
+# Hardware & Engine Allocations
+PARAMETER num_gpu 99
+
+# CRITICAL: Expand context. Claude Code needs a minimum of 32k to handle its system prompt + files
+PARAMETER num_ctx 32768
+
+# Strict execution limits for fast iteration
+PARAMETER temperature 0.2
+PARAMETER num_predict 1024
+
+# Stop tokens mapped explicitly to intercept tool loops
+PARAMETER stop "<|im_end|>"
+PARAMETER stop "</think>"
+PARAMETER stop "<|im_start|>"
+PARAMETER stop "<|endoftext|>"
+PARAMETER stop "<|object_ref_start|>"
+
+# DO NOT ADD A SYSTEM PROMPT HERE. Let Claude Code supply its agent framework instructions natively.
