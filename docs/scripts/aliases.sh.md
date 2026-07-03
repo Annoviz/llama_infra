@@ -23,11 +23,14 @@ Configure Claude for cloud routing (team/work profile). Clears local environment
 Configure Claude for local Ollama routing. Sets:
 - `ANTHROPIC_BASE_URL=http://localhost:11434`
 - `ANTHROPIC_AUTH_TOKEN=ollama`
-- `ANTHROPIC_DEFAULT_HAIKU_MODEL=fast-coder`
-- `ANTHROPIC_DEFAULT_SONNET_MODEL=coder`
-- `ANTHROPIC_DEFAULT_OPUS_MODEL=planner`
+- `CLAUDE_CODE_HAIKU_MODEL=fast-coder` (Claude Code model selection)
+- `CLAUDE_CODE_SONNET_MODEL=fast-coder` (Claude Code model selection)
+- `CLAUDE_CODE_OPUS_MODEL=planner` (Claude Code model selection)
+- `CLAUDE_CODE_SUBAGENT_MODEL=fast-coder` (subagents only)
 - `CLAUDE_CODE_MAX_OUTPUT_TOKENS=131072`
 - `CLAUDE_CONFIG_DIR=~/.claude-local`
+
+**Note:** The legacy `ANTHROPIC_DEFAULT_*_MODEL` variables are kept for compatibility but are ignored by Claude Code. Use `CLAUDE_CODE_*_MODEL` instead.
 
 ## Aliases
 

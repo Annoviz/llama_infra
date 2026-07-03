@@ -1,18 +1,24 @@
 FROM qwen2.5-coder:1.5b
+#FROM hf.co/unsloth/Qwen3-4B-Instract-2507-GGUF:UD-Q4_K_XL
 
 # Hardware & Engine Allocations
 PARAMETER num_gpu 99
 
 # CRITICAL: Expand context. Claude Code needs a minimum of 32k to handle its system prompt + files
-PARAMETER num_ctx 32768
+#PARAMETER num_ctx 32768
+PARAMETER num_ctx 131072
 
-# Strict execution limits for fast iteration
+PARAMETER num_thread 16
+
+# Precision Coding Inference Settings
 PARAMETER temperature 0.2
-PARAMETER num_predict 1024
+PARAMETER top_p 0.85
+PARAMETER top_k 20
+PARAMETER repeat_penalty 1.05
 
-# Stop tokens mapped explicitly to intercept tool loops
-#PARAMETER stop "<|im_end|>"
-#PARAMETER stop "<|endoftext|>"
-#PARAMETER stop "<|object_ref_start|>"
+# Lower the penalty parameters to prevent malformed formatting structures
+PARAMETER presence_penalty 0.0
+PARAMETER frequency_penalty 0.0
 
 # DO NOT ADD A SYSTEM PROMPT HERE. Let Claude Code supply its agent framework instructions natively.
+

@@ -26,13 +26,14 @@ services:
       OLLAMA_MODELS: /models
       OLLAMA_KV_CACHE_TYPE: q8_0 # can be: f16, q8_0, q4_0
       OLLAMA_FLASH_ATTENTION: 1
-      OLLAMA_MAX_LOADED_MODELS: 1
-      OLLAMA_NUM_PARALLEL: 1
+      OLLAMA_MAX_LOADED_MODELS: 2
+      OLLAMA_NUM_PARALLEL: 4
       OLLAMA_KEEP_ALIVE: 30m
-      OLLAMA_CONTEXT_LENGTH: 65536 #32768
+      OLLAMA_CONTEXT_LENGTH: 131072 # 65536 #32768
       OLLAMA_DRAFT_MTP: 1
       OLLAMA_CUDA_DRIVERS: 1
       OLLAMA_NUM_PREDICT: 8192
+      OLLAMA_MAX_QUEUE: 64
     # dns:
     #   - 8.8.8.8      # Google Primary Public DNS
     #   - 1.1.1.1      # Cloudflare Secondary Public DNS
