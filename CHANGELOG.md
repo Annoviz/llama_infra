@@ -1,4 +1,21 @@
 # Docker Image Update Changelog - March 26, 2026
+## Docker Image Updates - July 09, 2026
+
+**Note:** Each update was manually approved by the user via interactive prompt.
+
+
+### Updated Docker Images
+
+- **ollama/ollama**: `0.31.1` → `0.31.2`
+
+### Updated Python Packages
+
+- **llama-cpp-python[server]**: `0.3.32` → `0.3.33`
+- **uvicorn**: `0.49.0` → `0.51.0`
+- **hypothesis**: `6.155.7` → `6.156.4`
+
+---
+
 ## Docker Image Updates - July 02, 2026
 
 **Note:** Each update was manually approved by the user via interactive prompt.
