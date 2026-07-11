@@ -1,10 +1,11 @@
-# update-manager Skill
+---
+name: update-manager
+description: Check, suggest and apply Docker image and Python package version updates
+---
 
-Use this skill to manage Docker image and Python package versions in the llama_infra project.
+# Skill: Update Manager
 
-## Purpose
-
-Automate version management for Docker images and Python dependencies using the project's `tools/update_manager.py` script.
+Manage Docker image and Python package versions in the llama_infra project using `tools/update_manager.py`.
 
 ## Commands
 
