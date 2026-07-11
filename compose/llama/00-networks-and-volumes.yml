@@ -1,0 +1,2 @@
+# llama.cpp stack — shared networks and volumes
+# (no custom network or named volumes; services use default bridge + host mounts)

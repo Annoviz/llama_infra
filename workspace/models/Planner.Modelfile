@@ -1,5 +1,8 @@
 # Target the high-precision Unsloth Dynamic Q6 file
-FROM hf.co/unsloth/Qwen3.6-35B-A3B-MTP-GGUF:Qwen3.6-35B-A3B-UD-Q6_K.gguf
+#FROM hf.co/unsloth/Qwen3.6-35B-A3B-MTP-GGUF:Qwen3.6-35B-A3B-UD-Q6_K.gguf
+FROM hf.co/unsloth/Qwen3.6-27B-MTP-GGUF:Qwen3.6-27B-UD-Q4_K_XL.gguf
+# curl -L -o models/Qwen3.6-27B-MTP/mmproj-BF16.gguf https://huggingface.co/unsloth/Qwen3.6-27B-MTP-GGUF/resolve/main/mmproj-BF16.gguf
+FROM /models/Qwen3.6-27B-MTP/mmproj-BF16.gguf
 
 # Hardware Allocations for RTX 6000 Ada
 PARAMETER num_gpu 99
@@ -13,8 +16,8 @@ PARAMETER num_thread 16
 PARAMETER draft_num_predict 2
 
 # Sampling Alignment Settings
-#PARAMETER temperature 0.6
-PARAMETER temperature 0.2
+PARAMETER temperature 0.6
+#PARAMETER temperature 0.2
 PARAMETER top_p 0.90
 PARAMETER repeat_penalty 1.1
 

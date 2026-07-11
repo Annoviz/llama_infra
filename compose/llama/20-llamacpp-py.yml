@@ -1,29 +1,6 @@
+# llama.cpp Python server (llama-cpp-python + Jupyter)
+
 services:
-  llamacpp-server:
-    image: ${IMAGE:-ghcr.io/ggml-org/llama.cpp:full-cuda-b5350}
-    shm_size: '8gb'
-    entrypoint: ${ENTRYPOINT:-/app/llama-server} # default entrypoint: /app/tools.sh
-    deploy:
-      resources:
-        reservations:
-          devices:
-            - driver: nvidia
-              device_ids: ["${GPU_ID:-0}"]
-              capabilities: [gpu]
-    ports:
-      - 8080:8080
-    volumes:
-      - ${MODELS:-./models}:/models
-    environment:
-      # alternatively, you can use "LLAMA_ARG_MODEL_URL" to download the model
-      LLAMA_ARG_MODEL: ${LLAMA_ARG_MODEL:-/models/Qwen2.5-VL-7B-Instruct/Qwen2.5-VL-7B-Instruct-Q4_0.gguf}
-      LLAMA_ARG_CTX_SIZE: 4096
-      LLAMA_ARG_N_PARALLEL: 2
-      LLAMA_ARG_ENDPOINT_METRICS: 1
-      LLAMA_ARG_PORT: 8080
-      LLAMA_ARG_HOST: 0.0.0.0
-
-
   llamacpp-server-py:
     image: ${REGISTRY:-llamacpp-server-python}/llamacpp-server-py:${LLAMA_CPP_VERSION:-0.3.33}
     shm_size: '8gb'

@@ -28,7 +28,10 @@ COMPOSE_MAIN := docker compose --project-directory $(CURDIR) \
 	-f compose/main/40-falkordb.yml \
 	-f compose/main/50-falkordb-mcp.yml \
 	-f compose/main/60-unsloth.yml
-COMPOSE_LLAMA := docker compose --project-directory $(CURDIR) -f docker-compose.llama.cpp.yml
+COMPOSE_LLAMA := docker compose --project-directory $(CURDIR) \
+	-f compose/llama/00-networks-and-volumes.yml \
+	-f compose/llama/10-llamacpp-native.yml \
+	-f compose/llama/20-llamacpp-py.yml
 LLAMA_CPP_IMAGE ?= ghcr.io/ggml-org/llama.cpp:full-cuda-b5350
 
 .PHONY: help help-verbose \
@@ -45,7 +48,7 @@ LLAMA_CPP_IMAGE ?= ghcr.io/ggml-org/llama.cpp:full-cuda-b5350
 	restart-ollama restart-anythingllm restart-open-webui restart-falkordb restart-falkordb-mcp restart-unsloth restart-llamacpp restart-llamacpp-py \
 	logs-ollama logs-anythingllm logs-open-webui logs-falkordb logs-falkordb-mcp logs-unsloth logs-llamacpp logs-llamacpp-py logs-all \
 	ps-main ps-falkor ps-falkordb ps-falkordb-mcp ps-unsloth ps-llama ps-all \
-	gpu-host gpu-smoke-llamacpp perf-test clean prune
+	gpu-host gpu-smoke-llamacpp perf-test vision-test model-rebuild clean prune
 
 help:
 	@printf "\nllama_infra utility targets\n\n"
@@ -83,6 +86,10 @@ help-verbose:
 	@printf "  make perf-test-coder         # Benchmark coder model     → benchmarks/coder/\n"
 	@printf "  make perf-test-fast-coder    # Benchmark fast-coder model\n"
 	@printf "                        # Compares against reg-results.json in the output dir.\n"
+	@printf "\nVision (image understanding) tests:\n"
+	@printf "  make vision-test MODEL=fast-coder IMAGE=workspace/data/person.png\n"
+	@printf "                        # Test multimodal image understanding of a model\n"
+	@printf "  Available images: workspace/data/*.png, *.jpg\n"
 	@printf "                        # Warmup is skipped; only last measured run per combo\n"
 	@printf "                        # serves as baseline when no reference exists yet.\n"
 	@printf "\nDiagnostics:\n"
@@ -363,6 +370,18 @@ perf-test-coder:
 perf-test-fast-coder:
 	@mkdir -p benchmarks/perf-test-fast-coder
 	scripts/bench.sh fast-coder --output-dir benchmarks/perf-test-fast-coder $(ARGS)
+
+# ── Model rebuild ──────────────────────────────────────────────────────────────
+
+model-rebuild:
+	@$(COMPOSE_OLLAMA) run --rm --no-deps ollama-server ollama create $(NAME) -f /models/$(NAME).Modelfile
+
+
+# ── Vision (multimodal image understanding) test ──────────────────────────────
+
+vision-test:
+	@python3 scripts/vision_test.py $(IMAGE) --model $(MODEL) --prompt "$(PROMPT)" --max-tokens $(MAX_TOKENS) --base-url $(OLLAMA_BASE_URL) --timeout $(TIMEOUT)
+
 
 clean:
 	@find . -maxdepth 1 -type f \( -name 'compose_*.txt' -o -name '*_checks.json' -o -name 'verification_report.json' \) -print -delete

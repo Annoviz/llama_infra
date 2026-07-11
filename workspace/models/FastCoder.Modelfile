@@ -1,5 +1,11 @@
-FROM qwen2.5-coder:1.5b
-#FROM hf.co/unsloth/Qwen3-4B-Instract-2507-GGUF:UD-Q4_K_XL
+#FROM qwen2.5-coder:1.5b
+#FROM hf.co/unsloth/Qwen3-4B-Instract-2507-GGUF:Qwen3-4B-Instract-2507-UD-Q4_K_XL.gguf
+#FROM hf.co/unsloth/Qwen3.5-4B-GGUF:Qwen3.5-4B-Q4_K_M.gguf
+# curl -L -o models/Qwen3.5-4B/Qwen3.5-4B-UD-Q4_K_XL.gguf https://huggingface.co/unsloth/Qwen3.5-4B-GGUF/resolve/main/Qwen3.5-4B-UD-Q4_K_XL.gguf
+FROM /models/Qwen3.5-4B/Qwen3.5-4B-UD-Q4_K_XL.gguf
+# curl -L -o models/Qwen3.5-4B/mmproj-BF16.gguf https://huggingface.co/unsloth/Qwen3.5-4B-GGUF/resolve/main/mmproj-BF16.gguf
+FROM /models/Qwen3.5-4B/mmproj-BF16.gguf
+
 
 # Hardware & Engine Allocations
 PARAMETER num_gpu 99
