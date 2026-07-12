@@ -160,7 +160,7 @@ help-verbose:
 	@printf "  UNSLOTH_VERSION        : 2026.5.9-pt2.10.0-vllm-0.16.0-cu12.8-studio-release-v0.1.43-beta-2026-MAY-31\n"
 	@printf "  IMAGE                  : ghcr.io/ggml-org/llama.cpp:full-cuda-b5350\n"
 	@printf "  LLAMA_CPP_VERSION      : 0.3.30\n"
-	@printf "  VLLM_VERSION           : 0.25.0\n"
+	@printf "  VLLM_VERSION           : 0.25.0-cu129-ubuntu2404\n"
 	@printf "  LITELLM_VERSION        : 1.92.0\n"
 	@printf "  HF_DOWNLOADER_VERSION  : 0.1.0\n"
 	@printf "  VLLM_GATEWAY_PORT      : 11434\n"
@@ -194,7 +194,7 @@ build-vllm:
 	$(COMPOSE_VLLM) build --pull vllm-planner vllm-coder vllm-fastcoder
 
 pull-vllm-base:
-	docker pull vllm/vllm-openai:${VLLM_VERSION:-0.25.0}-cuda
+	docker pull vllm/vllm-openai:${VLLM_VERSION:-0.25.0-cu129-ubuntu2404}
 	docker pull ghcr.io/berriai/litellm:${LITELLM_VERSION:-1.92.0}
 
 pull-main:

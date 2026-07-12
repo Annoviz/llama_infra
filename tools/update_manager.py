@@ -324,14 +324,14 @@ def discover_docker_updates() -> List[UpdateItem]:
                 )
             )
 
-    # vLLM — check Docker Hub for latest <semver>-cuda tag
+    # vLLM — check Docker Hub for latest <semver>-cu129-ubuntu2404 tag
     if DOCKERFILE_VLLM.exists():
         vllm_text = DOCKERFILE_VLLM.read_text(encoding="utf-8")
-        current_vllm = re.search(r"ARG VLLM_VERSION=(\d+\.\d+\.\d+)", vllm_text)
+        current_vllm = re.search(r"ARG VLLM_VERSION=(\d+\.\d+\.\d+-cu\d+-ubuntu\d+)", vllm_text)
         if current_vllm:
             try:
                 tags = docker_hub_tags("vllm/vllm-openai")
-                cuda_tags = [t.replace("-cuda", "") for t in tags if re.match(r"^\d+\.\d+\.\d+-cuda$", t)]
+                cuda_tags = [t for t in tags if re.match(r"^\d+\.\d+\.\d+-cu\d+-ubuntu\d+$", t)]
                 latest = sorted(cuda_tags, key=version_key)[-1] if cuda_tags else None
             except (error.HTTPError, error.URLError):
                 latest = None
@@ -344,7 +344,7 @@ def discover_docker_updates() -> List[UpdateItem]:
                         current=current_vllm.group(1),
                         latest=latest,
                         applyable=is_newer(latest, current_vllm.group(1)),
-                        reason="Docker Hub semver-cuda tag",
+                        reason="Docker Hub <semver>-cu*-ubuntu* tag",
                     )
                 )
 

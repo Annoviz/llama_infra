@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1
-ARG VLLM_VERSION=0.25.0
-FROM vllm/vllm-openai:${VLLM_VERSION}-cuda
+ARG VLLM_VERSION=0.25.0-cu129-ubuntu2404
+FROM vllm/vllm-openai:${VLLM_VERSION}
 
 LABEL maintainer="llama_infra" \
       org.opencontainers.image.source="https://github.com/user/llama_infra"
