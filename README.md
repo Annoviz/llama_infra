@@ -31,6 +31,13 @@ llama.cpp stack:
 
 - llama.cpp services: [docs/services/llama-cpp.md](docs/services/llama-cpp.md)
 
+vLLM stack (Ollama replacement — gateway on port 11434):
+
+- Three vLLM engines (`planner`, `coder`, `fast-coder`) behind a LiteLLM gateway
+- OpenAI-compatible API at `http://localhost:11434/v1` — drop-in Ollama replacement
+- Mutually exclusive with the main stack (both bind port 11434)
+- `make up-vllm` / `make down-vllm` to start/stop
+
 General stack orchestration:
 
 - Top-level commands and shortcuts: [Makefile](Makefile) (`make help`)

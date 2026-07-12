@@ -1,0 +1,19 @@
+services:
+  vllm-coder:
+    extends:
+      file: compose/vllm/05-vllm-engine-base.yml
+      service: _vllm-engine-base
+    container_name: vllm-coder
+    build:
+      context: ..
+      dockerfile: compose/vllm/Dockerfile.vllm
+      args:
+        VLLM_VERSION: ${VLLM_VERSION:-0.25.0}
+    environment:
+      HF_TOKEN: "${HF_TOKEN}"
+      HUGGING_FACE_HUB_TOKEN: "${HF_TOKEN}"
+      VLLM_MODEL_REPO: "Qwen/Qwen3.6-27B-FP8"
+      VLLM_SERVED_NAME: "coder"
+      VLLM_MAX_LEN: "8192"
+      VLLM_GPU_MEM: "0.45"
+      VLLM_EXTRA_FLAGS: "--trust-remote-code --reasoning-parser qwen3"

@@ -1,0 +1,19 @@
+services:
+  vllm-planner:
+    extends:
+      file: compose/vllm/05-vllm-engine-base.yml
+      service: _vllm-engine-base
+    container_name: vllm-planner
+    build:
+      context: ..
+      dockerfile: compose/vllm/Dockerfile.vllm
+      args:
+        VLLM_VERSION: ${VLLM_VERSION:-0.25.0}
+    environment:
+      HF_TOKEN: "${HF_TOKEN}"
+      HUGGING_FACE_HUB_TOKEN: "${HF_TOKEN}"
+      VLLM_MODEL_REPO: "Qwen/Qwen3.6-35B-A3B-FP8"
+      VLLM_SERVED_NAME: "planner"
+      VLLM_MAX_LEN: "16384"
+      VLLM_GPU_MEM: "0.45"
+      VLLM_EXTRA_FLAGS: "--mm-encoder-tp-mode data --reasoning-parser qwen3 --trust-remote-code"

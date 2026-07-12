@@ -1,0 +1,19 @@
+services:
+  vllm-fastcoder:
+    extends:
+      file: compose/vllm/05-vllm-engine-base.yml
+      service: _vllm-engine-base
+    container_name: vllm-fastcoder
+    build:
+      context: ..
+      dockerfile: compose/vllm/Dockerfile.vllm
+      args:
+        VLLM_VERSION: ${VLLM_VERSION:-0.25.0}
+    environment:
+      HF_TOKEN: "${HF_TOKEN}"
+      HUGGING_FACE_HUB_TOKEN: "${HF_TOKEN}"
+      VLLM_MODEL_REPO: "Qwen/Qwen3.5-4B"
+      VLLM_SERVED_NAME: "fast-coder"
+      VLLM_MAX_LEN: "4096"
+      VLLM_GPU_MEM: "0.09"
+      VLLM_EXTRA_FLAGS: "--trust-remote-code --mm-encoder-tp-mode data"
