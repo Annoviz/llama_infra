@@ -61,7 +61,7 @@ LLAMA_CPP_IMAGE ?= ghcr.io/ggml-org/llama.cpp:full-cuda-b5350
 	logs-ollama logs-anythingllm logs-open-webui logs-falkordb logs-falkordb-mcp logs-unsloth logs-llamacpp logs-llamacpp-py logs-all \
 	logs-vllm-planner logs-vllm-coder logs-vllm-fastcoder logs-vllm-gateway \
 	ps-main ps-falkor ps-falkordb ps-falkordb-mcp ps-unsloth ps-llama ps-vllm ps-all \
-	gpu-host gpu-smoke-llamacpp perf-test vision-test model-rebuild clean prune
+	gpu-host gpu-smoke-llamacpp smoke-vllm perf-test vision-test model-rebuild clean prune
 
 help:
 	@printf "\nllama_infra utility targets\n\n"
@@ -192,6 +192,12 @@ config-all: config-main config-falkor config-unsloth config-llama config-open-we
 # Build (custom Dockerfiles)
 build-vllm:
 	$(COMPOSE_VLLM) build --pull vllm-planner vllm-coder vllm-fastcoder
+
+# Smoke test — verify compose config + upstream image tag before building
+smoke-vllm:
+	$(COMPOSE_VLLM) config > /dev/null && echo "compose OK" || (echo "compose FAILED"; exit 1)
+	docker pull vllm/vllm-openai:${VLLM_VERSION:-v0.25.0-cu129-ubuntu2404}
+	docker pull ghcr.io/berriai/litellm:${LITELLM_VERSION:-1.92.0}
 
 pull-vllm-base:
 	docker pull vllm/vllm-openai:${VLLM_VERSION:-v0.25.0-cu129-ubuntu2404}
