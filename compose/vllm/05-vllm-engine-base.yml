@@ -6,7 +6,7 @@ services:
       args:
         VLLM_VERSION: ${VLLM_VERSION:-0.25.0}
         HUGGINGFACE_HUB_VERSION: ${HUGGINGFACE_HUB_VERSION:-0.35.0}
-    image: llama-infra-vllm:${VLLM_VERSION:-0.25.0}
+    image: ${REGISTRY:-llama-infra-vllm}/vllm:${VLLM_VERSION:-0.25.0}
     shm_size: "16gb"
     ulimits:
       memlock: -1
