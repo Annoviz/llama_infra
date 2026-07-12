@@ -4,9 +4,9 @@ services:
       context: .
       dockerfile: compose/vllm/Dockerfile.vllm
       args:
-        VLLM_VERSION: ${VLLM_VERSION:-0.25.0-cu129-ubuntu2404}
+        VLLM_VERSION: ${VLLM_VERSION:-v0.25.0-cu129-ubuntu2404}
         HUGGINGFACE_HUB_VERSION: ${HUGGINGFACE_HUB_VERSION:-0.35.0}
-    image: ${REGISTRY:-llama-infra-vllm}/vllm:${VLLM_VERSION:-0.25.0-cu129-ubuntu2404}
+    image: ${REGISTRY:-llama-infra-vllm}/vllm:${VLLM_VERSION:-v0.25.0-cu129-ubuntu2404}
     shm_size: "16gb"
     ulimits:
       memlock: -1

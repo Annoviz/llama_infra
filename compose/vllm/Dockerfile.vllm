@@ -1,5 +1,5 @@
 # syntax=docker/dockerfile:1
-ARG VLLM_VERSION=0.25.0-cu129-ubuntu2404
+ARG VLLM_VERSION=v0.25.0-cu129-ubuntu2404
 FROM vllm/vllm-openai:${VLLM_VERSION}
 
 LABEL maintainer="llama_infra" \
