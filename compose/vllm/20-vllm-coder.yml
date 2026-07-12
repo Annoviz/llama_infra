@@ -1,19 +1,41 @@
 services:
   vllm-coder:
-    extends:
-      file: compose/vllm/05-vllm-engine-base.yml
-      service: _vllm-engine-base
-    container_name: vllm-coder
     build:
-      context: ..
+      context: .
       dockerfile: compose/vllm/Dockerfile.vllm
       args:
         VLLM_VERSION: ${VLLM_VERSION:-0.25.0}
+        HUGGINGFACE_HUB_VERSION: ${HUGGINGFACE_HUB_VERSION:-0.35.0}
+    image: ${REGISTRY:-llama-infra-vllm}/vllm:${VLLM_VERSION:-0.25.0}
+    container_name: vllm-coder
+    shm_size: "16gb"
+    ulimits:
+      memlock: -1
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              device_ids: ["${GPU_ID:-0}"]
+              capabilities: [gpu]
+    volumes:
+      - ${MODELS:-./models}/vllm:/root/.cache/huggingface
+    networks:
+      - vllm-bridge
+      - ollama-bridge
+    restart: always
     environment:
       HF_TOKEN: "${HF_TOKEN}"
       HUGGING_FACE_HUB_TOKEN: "${HF_TOKEN}"
+      HF_HOME: "/root/.cache/huggingface"
       VLLM_MODEL_REPO: "Qwen/Qwen3.6-27B-FP8"
       VLLM_SERVED_NAME: "coder"
       VLLM_MAX_LEN: "8192"
       VLLM_GPU_MEM: "0.45"
       VLLM_EXTRA_FLAGS: "--trust-remote-code --reasoning-parser qwen3"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/v1/models"]
+      interval: 30s
+      timeout: 10s
+      retries: 10
+      start_period: 120s
