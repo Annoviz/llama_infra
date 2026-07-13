@@ -63,7 +63,7 @@ LLAMA_CPP_IMAGE ?= ghcr.io/ggml-org/llama.cpp:full-cuda13
 	logs-ollama logs-anythingllm logs-open-webui logs-falkordb logs-falkordb-mcp logs-unsloth logs-llamacpp logs-llamacpp-py logs-all \
 	logs-vllm-planner logs-vllm-coder logs-vllm-fastcoder logs-vllm-gateway \
 	ps-main ps-falkor ps-falkordb ps-falkordb-mcp ps-unsloth ps-llama ps-vllm ps-all \
-	gpu-host gpu-smoke-llamacpp smoke-vllm perf-test vision-test model-rebuild clean prune
+	gpu-host gpu-smoke-llamacpp smoke-vllm perf-test vision-test bench-vision model-rebuild clean prune
 
 help:
 	@printf "\nllama_infra utility targets\n\n"
@@ -124,6 +124,9 @@ help-verbose:
 	@printf "  make vision-test MODEL=fast-coder IMAGE=workspace/data/person.png\n"
 	@printf "                        # Test multimodal image understanding of a model\n"
 	@printf "  Available images: workspace/data/*.png, *.jpg\n"
+	@printf "\nVision benchmarks (structured results + regression):\n"
+	@printf "  make bench-vision MODEL=fast-coder IMAGES=img1.jpg,img2.jpg\n"
+	@printf "                        # Benchmark vision across models/images → benchmarks/vision/\n"
 	@printf "                        # Warmup is skipped; only last measured run per combo\n"
 	@printf "                        # serves as baseline when no reference exists yet.\n"
 	@printf "\nDiagnostics:\n"
@@ -495,6 +498,16 @@ model-rebuild:
 
 vision-test:
 	@python3 scripts/vision_test.py $(IMAGE) --model $(MODEL) --prompt "$(PROMPT)" --max-tokens $(MAX_TOKENS) --base-url $(OLLAMA_BASE_URL) --timeout $(TIMEOUT)
+
+
+# ── Vision benchmark (structured results + regression baseline) ───────────────
+
+bench-vision:
+	@mkdir -p benchmarks/vision
+	python3 scripts/bench_vision.py \
+		--models "$(MODEL)" \
+		--images "$(IMAGES)" \
+		--output-dir benchmarks/vision
 
 
 clean:
