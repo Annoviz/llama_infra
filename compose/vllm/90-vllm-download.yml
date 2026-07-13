@@ -8,21 +8,7 @@ services:
       VLLM_MODEL_REPO: "Qwen/Qwen3.6-35B-A3B-FP8"
     volumes:
       - ${MODELS:-./models}/vllm:/root/.cache/huggingface
-    entrypoint: ["sh", "-c"]
-    command:
-      - |
-        python3 -c "
-        from huggingface_hub import scan_cache_dir, snapshot_download
-        cache = scan_cache_dir()
-        repos = {r.repo_id for r in cache.repos}
-        target = 'Qwen/Qwen3.6-35B-A3B-FP8'
-        if target not in repos:
-            print(f'[download] Downloading {target}...')
-            snapshot_download(repo_id=target, repo_type='model')
-            print('[download] Complete.')
-        else:
-            print(f'[download] {target} already cached — skipping.')
-        "
+    entrypoint: ["/app/hf_download.sh"]
     profiles: ["download"]
 
   vllm-download-coder:
@@ -31,24 +17,10 @@ services:
     environment:
       HF_TOKEN: "${HF_TOKEN}"
       HUGGING_FACE_HUB_TOKEN: "${HF_TOKEN}"
-      VLLM_MODEL_REPO: "Qwen/Qwen3.6-27B-AWQ"
+      VLLM_MODEL_REPO: "Qwen/Qwen3.6-27B-FP8"
     volumes:
       - ${MODELS:-./models}/vllm:/root/.cache/huggingface
-    entrypoint: ["sh", "-c"]
-    command:
-      - |
-        python3 -c "
-        from huggingface_hub import scan_cache_dir, snapshot_download
-        cache = scan_cache_dir()
-        repos = {r.repo_id for r in cache.repos}
-        target = 'Qwen/Qwen3.6-27B-FP8'
-        if target not in repos:
-            print(f'[download] Downloading {target}...')
-            snapshot_download(repo_id=target, repo_type='model')
-            print('[download] Complete.')
-        else:
-            print(f'[download] {target} already cached — skipping.')
-        "
+    entrypoint: ["/app/hf_download.sh"]
     profiles: ["download"]
 
   vllm-download-fastcoder:
@@ -60,19 +32,5 @@ services:
       VLLM_MODEL_REPO: "Qwen/Qwen3.5-4B"
     volumes:
       - ${MODELS:-./models}/vllm:/root/.cache/huggingface
-    entrypoint: ["sh", "-c"]
-    command:
-      - |
-        python3 -c "
-        from huggingface_hub import scan_cache_dir, snapshot_download
-        cache = scan_cache_dir()
-        repos = {r.repo_id for r in cache.repos}
-        target = 'Qwen/Qwen3.5-4B'
-        if target not in repos:
-            print(f'[download] Downloading {target}...')
-            snapshot_download(repo_id=target, repo_type='model')
-            print('[download] Complete.')
-        else:
-            print(f'[download] {target} already cached — skipping.')
-        "
+    entrypoint: ["/app/hf_download.sh"]
     profiles: ["download"]

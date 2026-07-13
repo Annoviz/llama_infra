@@ -12,5 +12,7 @@ RUN pip install --no-cache-dir "huggingface_hub==${HUGGINGFACE_HUB_VERSION}"
 # Entrypoint handles: (1) model cache check, (2) exec vllm serve
 COPY scripts/entrypoint.vllm.sh /app/entrypoint.sh
 RUN chmod +x /app/entrypoint.sh
+COPY scripts/hf_download.sh /app/hf_download.sh
+RUN chmod +x /app/hf_download.sh
 
 ENTRYPOINT ["/app/entrypoint.sh"]
