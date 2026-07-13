@@ -1,0 +1,40 @@
+# llama.cpp router mode — multi-model server on port 11434 (drop-in Ollama/vLLM replacement)
+
+services:
+  llamacpp-router:
+    image: ${LLAMA_CPP_IMAGE:-ghcr.io/ggml-org/llama.cpp:full-cuda13}
+    shm_size: '8gb'
+    container_name: llamacpp-router
+    entrypoint: ["/app/scripts/entrypoint.llamacpp-router.sh"]
+    ulimits:
+      memlock: -1
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              device_ids: ["${GPU_ID:-0}"]
+              capabilities: [gpu]
+    ports:
+      - "${LLAMA_ROUTER_PORT:-11434}:8080"  # Host port → container port (fixed at 8080)
+    volumes:
+      - ${MODELS:-./models}:/models:ro
+      - ./workspace/models/router-preset.ini:/app/router-preset.ini:ro
+      - ./scripts/entrypoint.llamacpp-router.sh:/app/scripts/entrypoint.llamacpp-router.sh:ro
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+    networks:
+      - llamacpp-bridge
+      - ollama-bridge
+    restart: unless-stopped
+
+networks:
+  llamacpp-bridge:
+    driver: bridge
+  ollama-bridge:
+    external: true
+    name: llama_infra_ollama-bridge

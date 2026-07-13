@@ -33,7 +33,9 @@ DOCKER_COMPOSE_OPENWEBUI = ROOT / "compose/main/30-open-webui.yml"
 DOCKER_COMPOSE_FALKORDB = ROOT / "compose/main/40-falkordb.yml"
 DOCKER_COMPOSE_FALKORDB_MCP = ROOT / "compose/main/50-falkordb-mcp.yml"
 DOCKER_COMPOSE_UNSLOTH = ROOT / "compose/main/60-unsloth.yml"
-DOCKER_COMPOSE_LLAMA = ROOT / "docker-compose.llama.cpp.yml"
+# llama.cpp stack — split compose files (replaced docker-compose.llama.cpp.yml)
+DOCKER_COMPOSE_LLAMA_NATIVE = ROOT / "compose/llama/10-llamacpp-native.yml"
+DOCKER_COMPOSE_LLAMA_PY = ROOT / "compose/llama/20-llamacpp-py.yml"
 DOCKERFILE_LLAMA_PY = ROOT / "compose/llama/Dockerfile.llamacpp-server-python"
 DOCKER_COMPOSE_VLLM_ENGINE_BASE = ROOT / "compose/vllm/05-vllm-engine-base.yml"
 DOCKER_COMPOSE_VLLM_GATEWAY = ROOT / "compose/vllm/40-vllm-gateway.yml"
@@ -73,9 +75,14 @@ def version_key(value: str) -> Tuple[int, ...]:
 
 
 def is_newer(latest: str, current: str) -> bool:
-    full_cuda = re.compile(r"^full-cuda-b(\d+)$")
-    latest_m = full_cuda.match(latest)
-    current_m = full_cuda.match(current)
+    # Floating CUDA tags (full-cuda13, full-cuda12) — always point to latest; never update
+    cuda_ver = re.compile(r"^(?:full|light|server)-cuda(\d+)$")
+    if cuda_ver.match(current):
+        return False
+    # Legacy build-number tags (full-cuda-b5350) — compare build numbers
+    full_cuda_build = re.compile(r"^full-cuda-b(\d+)$")
+    latest_m = full_cuda_build.match(latest)
+    current_m = full_cuda_build.match(current)
     if latest_m and current_m:
         return int(latest_m.group(1)) > int(current_m.group(1))
     return version_key(latest) > version_key(current)
@@ -163,7 +170,8 @@ def discover_docker_updates() -> List[UpdateItem]:
     falkordb_text = DOCKER_COMPOSE_FALKORDB.read_text(encoding="utf-8")
     falkordb_mcp_text = DOCKER_COMPOSE_FALKORDB_MCP.read_text(encoding="utf-8")
     unsloth_text = DOCKER_COMPOSE_UNSLOTH.read_text(encoding="utf-8")
-    llama_text = DOCKER_COMPOSE_LLAMA.read_text(encoding="utf-8")
+    llama_native_text = DOCKER_COMPOSE_LLAMA_NATIVE.read_text(encoding="utf-8")
+    llama_py_text = DOCKER_COMPOSE_LLAMA_PY.read_text(encoding="utf-8")
 
     current_ollama = re.search(r"\$\{OLLAMA_VERSION:-([^}]+)\}", ollama_text)
     current_anything = re.search(r"\$\{ANYTHINGLLM_VERSION:-([^}]+)\}", anything_text)
@@ -172,9 +180,9 @@ def discover_docker_updates() -> List[UpdateItem]:
     current_falkordb_mcp = re.search(r"\$\{FALKORDB_MCP_VERSION:-([^}]+)\}", falkordb_mcp_text)
     current_unsloth = re.search(r"\$\{UNSLOTH_VERSION:-([^}]+)\}", unsloth_text)
     current_llama_image = re.search(
-        r"\$\{IMAGE:-ghcr\.io/ggml-org/llama\.cpp:([^}]+)\}", llama_text
+        r"\$\{LLAMA_CPP_IMAGE:-ghcr\.io/ggml-org/llama\.cpp:([^}]+)\}", llama_native_text
     )
-    current_llama_cpp_ver = re.search(r"\$\{LLAMA_CPP_VERSION:-([^}]+)\}", llama_text)
+    current_llama_cpp_ver = re.search(r"\$\{LLAMA_CPP_VERSION:-([^}]+)\}", llama_py_text)
 
     if current_ollama:
         try:
@@ -290,19 +298,24 @@ def discover_docker_updates() -> List[UpdateItem]:
 
     if current_llama_image:
         try:
-            latest = latest_tag(ghcr_tags("ggml-org/llama.cpp"), r"^full-cuda-b\d+$")
+            all_tags = ghcr_tags("ggml-org/llama.cpp")
+            # Prefer latest build-number tag (full-cuda-b####) — these are the real versioned tags.
+            # Explicit CUDA ver tags (full-cuda13, full-cuda12) are floating aliases not in tags/list.
+            legacy_build = latest_tag(all_tags, r"^full-cuda-b\d+$")
+            fallback_plain = "full-cuda" if "full-cuda" in all_tags else None
+            latest = legacy_build or fallback_plain
         except (error.HTTPError, error.URLError):
             latest = None
         if latest:
             items.append(
                 UpdateItem(
                     kind="docker",
-                    name="ghcr.io/ggml-org/llama.cpp:full-cuda-b*",
-                    source_file=DOCKER_COMPOSE_LLAMA,
+                    name="ghcr.io/ggml-org/llama.cpp:full-cuda*",
+                    source_file=DOCKER_COMPOSE_LLAMA_NATIVE,
                     current=current_llama_image.group(1),
                     latest=latest,
                     applyable=is_newer(latest, current_llama_image.group(1)),
-                    reason="GHCR full-cuda-b tag",
+                    reason="GHCR full-cuda-b tag (current; use full-cuda13 for floating CUDA 13)",
                 )
             )
 
@@ -316,7 +329,7 @@ def discover_docker_updates() -> List[UpdateItem]:
                 UpdateItem(
                     kind="python",
                     name="llama-cpp-python[server]",
-                    source_file=DOCKER_COMPOSE_LLAMA,
+                    source_file=DOCKER_COMPOSE_LLAMA_PY,
                     current=current_llama_cpp_ver.group(1),
                     latest=latest,
                     applyable=is_newer(latest, current_llama_cpp_ver.group(1)),
@@ -485,17 +498,19 @@ def build_replacements(items: Sequence[UpdateItem]) -> List[Replacement]:
                     new=r"${UNSLOTH_VERSION:-" + item.latest + "}",
                 )
             )
-        elif item.name == "ghcr.io/ggml-org/llama.cpp:full-cuda-b*":
+        elif item.name == "ghcr.io/ggml-org/llama.cpp:full-cuda*":
+            # Native server image (10-llamacpp-native.yml)
             replacements.append(
                 Replacement(
-                    source_file=DOCKER_COMPOSE_LLAMA,
-                    old=r"${IMAGE:-ghcr.io/ggml-org/llama.cpp:" + item.current + "}",
-                    new=r"${IMAGE:-ghcr.io/ggml-org/llama.cpp:" + item.latest + "}",
+                    source_file=DOCKER_COMPOSE_LLAMA_NATIVE,
+                    old=r"${LLAMA_CPP_IMAGE:-ghcr.io/ggml-org/llama.cpp:" + item.current + "}",
+                    new=r"${LLAMA_CPP_IMAGE:-ghcr.io/ggml-org/llama.cpp:" + item.latest + "}",
                 )
             )
+            # Python server build arg (20-llamacpp-py.yml)
             replacements.append(
                 Replacement(
-                    source_file=DOCKER_COMPOSE_LLAMA,
+                    source_file=DOCKER_COMPOSE_LLAMA_PY,
                     old=r"${BASE_IMAGE:-ghcr.io/ggml-org/llama.cpp:"
                     + item.current
                     + "}",
@@ -504,6 +519,7 @@ def build_replacements(items: Sequence[UpdateItem]) -> List[Replacement]:
                     + "}",
                 )
             )
+            # Dockerfile base image ARG
             replacements.append(
                 Replacement(
                     source_file=DOCKERFILE_LLAMA_PY,
@@ -514,7 +530,7 @@ def build_replacements(items: Sequence[UpdateItem]) -> List[Replacement]:
         elif item.name == "llama-cpp-python[server]":
             replacements.append(
                 Replacement(
-                    source_file=DOCKER_COMPOSE_LLAMA,
+                    source_file=DOCKER_COMPOSE_LLAMA_PY,
                     old=r"${LLAMA_CPP_VERSION:-" + item.current + "}",
                     new=r"${LLAMA_CPP_VERSION:-" + item.latest + "}",
                 )

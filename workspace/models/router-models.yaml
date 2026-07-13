@@ -1,0 +1,46 @@
+# llama.cpp router model registry (parallel to vLLM workspace/vllm/vllm-models.yaml)
+router_mode: true
+models_max: 2
+
+optimization:
+  flash_attn: false  # auto-detected by llama.cpp; preset key untested in b5350+
+  mlock: true
+  offload_kqv: true
+
+models:
+  - id: planner
+    served_name: planner
+    gguf_path: /models/Qwen3.6-35B-A3B-MTP/Qwen3.6-35B-A3B-MTP-UD-Q4_K_XL.gguf
+    mmproj: /models/Qwen3.6-35B-A3B-MTP/mmproj-BF16.gguf
+    format: q4_k_xl
+    ctx_size: 131072
+    n_predict: 8192
+    n_batch: 4096
+    temp: 0.6
+    top_p: 0.90
+    multimodal: true
+    spec_type: draft-mtp
+    notes: "A3B-MTP — auxiliary prediction heads; higher temp for creative reasoning"
+
+  - id: coder
+    served_name: coder
+    gguf_path: /models/Qwen3.6-27B-MTP/Qwen3.6-27B-MTP-UD-Q4_K_XL.gguf
+    format: q4_k_xl
+    ctx_size: 8192
+    n_batch: 2048
+    temp: 0.1
+    top_p: 0.80
+    multimodal: false
+    spec_type: draft-mtp
+    notes: "MTP variant — auxiliary prediction heads; low temp for deterministic code"
+
+  - id: fast-coder
+    served_name: fast-coder
+    gguf_path: /models/Qwen3.5-4B/Qwen3.5-4B-UD-Q4_K_XL.gguf
+    mmproj: /models/Qwen3.5-4B/mmproj-BF16.gguf
+    format: q4_k_xl
+    ctx_size: 131072
+    n_batch: 2048
+    temp: 0.2
+    top_p: 0.85
+    multimodal: true

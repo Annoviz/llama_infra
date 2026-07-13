@@ -1,4 +1,4 @@
-ARG BASE_IMAGE=ghcr.io/ggml-org/llama.cpp:full-cuda-b5350
+ARG BASE_IMAGE=ghcr.io/ggml-org/llama.cpp:full-cuda13
 FROM ${BASE_IMAGE}
 
 ENV DEBIAN_FRONTEND=noninteractive

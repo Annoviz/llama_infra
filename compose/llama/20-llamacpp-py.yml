@@ -12,7 +12,7 @@ services:
         context: .
         dockerfile: compose/llama/Dockerfile.llamacpp-server-python
         args:
-          BASE_IMAGE: ${BASE_IMAGE:-ghcr.io/ggml-org/llama.cpp:full-cuda-b5350}
+          BASE_IMAGE: ${BASE_IMAGE:-ghcr.io/ggml-org/llama.cpp:full-cuda13}
           LLAMA_CPP_VERSION: ${LLAMA_CPP_VERSION:-0.3.33}
           REQUIREMENTS_FILE: ${REQUIREMENTS_FILE:-requirements-dev.txt}
     deploy:

@@ -32,6 +32,8 @@ COMPOSE_LLAMA := docker compose --project-directory $(CURDIR) \
 	-f compose/llama/00-networks-and-volumes.yml \
 	-f compose/llama/10-llamacpp-native.yml \
 	-f compose/llama/20-llamacpp-py.yml
+COMPOSE_LLAMA_ROUTER := docker compose --project-directory $(CURDIR) \
+	-f compose/llama/15-llamacpp-router.yml
 COMPOSE_VLLM := docker compose --project-directory $(CURDIR) \
 	-f compose/vllm/00-vllm-networks.yml \
 	-f compose/vllm/05-vllm-engine-base.yml \
@@ -42,7 +44,7 @@ COMPOSE_VLLM := docker compose --project-directory $(CURDIR) \
 COMPOSE_VLLM_DL := docker compose --project-directory $(CURDIR) \
 	-f compose/vllm/00-vllm-networks.yml \
 	-f compose/vllm/90-vllm-download.yml
-LLAMA_CPP_IMAGE ?= ghcr.io/ggml-org/llama.cpp:full-cuda-b5350
+LLAMA_CPP_IMAGE ?= ghcr.io/ggml-org/llama.cpp:full-cuda13
 
 .PHONY: help help-verbose \
 	config-main config-falkor config-llama config-vllm config-all \
@@ -53,11 +55,11 @@ LLAMA_CPP_IMAGE ?= ghcr.io/ggml-org/llama.cpp:full-cuda-b5350
 	check-agent-docs verify-agent-routing check-doc-links \
 	precommit-install precommit-run precommit-update \
 	up-ollama up-anythingllm up-open-webui up-main up-falkordb up-falkordb-mcp up-unsloth up-main-all \
-	up-llamacpp up-llamacpp-py up-llama \
+	up-llamacpp up-llamacpp-py up-llama up-llamacpp-router \
 	up-vllm up-vllm-planner up-vllm-coder up-vllm-fastcoder download-vllm-models \
-	down-main down-falkor down-falkordb down-falkordb-mcp down-unsloth down-llama down-vllm down-all \
+	down-main down-falkor down-falkordb down-falkordb-mcp down-unsloth down-llama down-vllm down-llamacpp-router down-all \
 	restart-ollama restart-anythingllm restart-open-webui restart-falkordb restart-falkordb-mcp restart-unsloth restart-llamacpp restart-llamacpp-py \
-	restart-vllm-planner restart-vllm-coder restart-vllm-fastcoder \
+	restart-vllm-planner restart-vllm-coder restart-vllm-fastcoder restart-llamacpp-router \
 	logs-ollama logs-anythingllm logs-open-webui logs-falkordb logs-falkordb-mcp logs-unsloth logs-llamacpp logs-llamacpp-py logs-all \
 	logs-vllm-planner logs-vllm-coder logs-vllm-fastcoder logs-vllm-gateway \
 	ps-main ps-falkor ps-falkordb ps-falkordb-mcp ps-unsloth ps-llama ps-vllm ps-all \
@@ -106,6 +108,9 @@ help-verbose:
 	@printf "  make build-llamacpp      # Build the native llama.cpp server image\n"
 	@printf "  make build-llamacpp-py   # Build the python llama-cpp server image\n"
 	@printf "  make up-llamacpp-py      # Start the python llama-cpp server\n"
+	@printf "  NOTE: Router mode and Ollama/vLLM are mutually exclusive (both bind 11434).\n"
+	@printf "        Stop one before starting another.\n"
+	@printf "  make up-llamacpp-router  # Start llama.cpp router mode (multi-model, port 11434)\n"
 	@printf "  make down-llama          # Stop the llama.cpp stack\n"
 	@printf "\nBenchmarks:\n"
 	@printf "  make perf-test [ARGS='--model foo --iterations 5']\n"
@@ -158,7 +163,7 @@ help-verbose:
 	@printf "  FALKORDB_VERSION       : v4.18.10\n"
 	@printf "  FALKORDB_MCP_VERSION   : 1.2.2\n"
 	@printf "  UNSLOTH_VERSION        : 2026.5.9-pt2.10.0-vllm-0.16.0-cu12.8-studio-release-v0.1.43-beta-2026-MAY-31\n"
-	@printf "  IMAGE                  : ghcr.io/ggml-org/llama.cpp:full-cuda-b5350\n"
+	@printf "  LLAMA_CPP_IMAGE          : ghcr.io/ggml-org/llama.cpp:full-cuda13\n"
 	@printf "  LLAMA_CPP_VERSION      : 0.3.30\n"
 	@printf "  VLLM_VERSION           : v0.25.0-cu129-ubuntu2404\n"
 	@printf "  LITELLM_VERSION        : 1.92.0\n"
@@ -298,6 +303,20 @@ up-llamacpp:
 up-llamacpp-py:
 	$(COMPOSE_LLAMA) up -d llamacpp-server-py
 
+# llama.cpp router mode — multi-model server on 11434 (mutually exclusive with Ollama/vLLM)
+up-llamacpp-router:
+	@printf "NOTE: Router binds port 11434 — stop Ollama and vLLM first.\n"
+	$(COMPOSE_LLAMA_ROUTER) up -d
+
+down-llamacpp-router:
+	$(COMPOSE_LLAMA_ROUTER) down
+
+restart-llamacpp-router:
+	$(COMPOSE_LLAMA_ROUTER) restart llamacpp-router
+
+logs-llamacpp-router:
+	$(COMPOSE_LLAMA_ROUTER) logs -f --tail=200 llamacpp-router
+
 # vLLM stack — gateway on 11434 (mutually exclusive with Ollama)
 up-vllm: build-vllm
 	$(COMPOSE_VLLM) up -d
@@ -429,7 +448,10 @@ ps-llama:
 ps-vllm:
 	$(COMPOSE_VLLM) ps
 
-ps-all: ps-main ps-falkor ps-unsloth ps-llama ps-vllm
+ps-llamacpp-router:
+	$(COMPOSE_LLAMA_ROUTER) ps
+
+ps-all: ps-main ps-falkor ps-unsloth ps-llama ps-vllm ps-llamacpp-router
 
 logs-all:
 	@printf "Tailing logs from all containers...\n"
