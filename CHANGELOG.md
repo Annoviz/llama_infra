@@ -1,4 +1,29 @@
 # Docker Image Update Changelog - March 26, 2026
+
+## vLLM Stack — Added (July 13, 2026)
+
+**New infrastructure:** A third Docker stack running three vLLM engines behind a LiteLLM gateway on port 11434 (drop-in Ollama replacement).
+
+### New Components
+- **vLLM Planner** (`Qwen/Qwen3.6-35B-A3B-FP8`, FP8 MoE, ~21.6 GB VRAM) — multimodal + reasoning
+- **vLLM Coder** (`Qwen/Qwen3.6-27B-AWQ`, AWQ INT4, ~17.2 GB VRAM) — deep code generation
+- **vLLM FastCoder** (`Qwen/Qwen3.5-4B`, FP16, ~4.4 GB VRAM) — fast boilerplate turns
+- **LiteLLM Gateway** — OpenAI-compatible API on port 11434; routes by model name
+
+### New Files
+- `compose/vllm/` — Dockerfiles, split compose files (networks, engine base, planner, coder, fastcoder, gateway, download)
+- `scripts/entrypoint.vllm.sh` — HF cache check → vLLM serve entrypoint
+- `workspace/vllm/litellm_config.yaml` — LiteLLM routing config
+- `workspace/vllm/vllm-models.yaml` — Machine-readable model registry
+
+### Makefile Targets
+- `make up-vllm`, `down-vllm`, `build-vllm`, `config-vllm`, `ps-vllm`, `logs-vllm-*`, `restart-vllm-*`
+- `make download-vllm-models` — pre-download HF models to `${MODELS}/vllm/`
+
+### Update Manager
+- New targets: `vllm/vllm-openai (CUDA)` and `ghcr.io/berriai/litellm`
+- Checks Docker Hub for `<semver>-cuda` tags; PyPI for stable LiteLLM versions only
+
 ## Docker Image Updates - July 09, 2026
 
 **Note:** Each update was manually approved by the user via interactive prompt.

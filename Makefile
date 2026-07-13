@@ -32,23 +32,36 @@ COMPOSE_LLAMA := docker compose --project-directory $(CURDIR) \
 	-f compose/llama/00-networks-and-volumes.yml \
 	-f compose/llama/10-llamacpp-native.yml \
 	-f compose/llama/20-llamacpp-py.yml
+COMPOSE_VLLM := docker compose --project-directory $(CURDIR) \
+	-f compose/vllm/00-vllm-networks.yml \
+	-f compose/vllm/05-vllm-engine-base.yml \
+	-f compose/vllm/10-vllm-planner.yml \
+	-f compose/vllm/20-vllm-coder.yml \
+	-f compose/vllm/30-vllm-fastcoder.yml \
+	-f compose/vllm/40-vllm-gateway.yml
+COMPOSE_VLLM_DL := docker compose --project-directory $(CURDIR) \
+	-f compose/vllm/00-vllm-networks.yml \
+	-f compose/vllm/90-vllm-download.yml
 LLAMA_CPP_IMAGE ?= ghcr.io/ggml-org/llama.cpp:full-cuda-b5350
 
 .PHONY: help help-verbose \
-	config-main config-falkor config-llama config-all \
+	config-main config-falkor config-llama config-vllm config-all \
 	config-unsloth config-open-webui \
-	pull-main pull-ollama pull-open-webui pull-falkor pull-falkordb pull-falkordb-mcp pull-unsloth pull-llama pull-all \
-	build-llamacpp build-llamacpp-py models-sync \
+	pull-main pull-ollama pull-open-webui pull-falkor pull-falkordb pull-falkordb-mcp pull-unsloth pull-llama pull-vllm-base pull-all \
+	build-llamacpp build-llamacpp-py build-vllm models-sync \
 	updates-check updates-suggest updates-apply \
 	check-agent-docs verify-agent-routing check-doc-links \
 	precommit-install precommit-run precommit-update \
 	up-ollama up-anythingllm up-open-webui up-main up-falkordb up-falkordb-mcp up-unsloth up-main-all \
 	up-llamacpp up-llamacpp-py up-llama \
-	down-main down-falkor down-falkordb down-falkordb-mcp down-unsloth down-llama down-all \
+	up-vllm up-vllm-planner up-vllm-coder up-vllm-fastcoder download-vllm-models \
+	down-main down-falkor down-falkordb down-falkordb-mcp down-unsloth down-llama down-vllm down-all \
 	restart-ollama restart-anythingllm restart-open-webui restart-falkordb restart-falkordb-mcp restart-unsloth restart-llamacpp restart-llamacpp-py \
+	restart-vllm-planner restart-vllm-coder restart-vllm-fastcoder \
 	logs-ollama logs-anythingllm logs-open-webui logs-falkordb logs-falkordb-mcp logs-unsloth logs-llamacpp logs-llamacpp-py logs-all \
-	ps-main ps-falkor ps-falkordb ps-falkordb-mcp ps-unsloth ps-llama ps-all \
-	gpu-host gpu-smoke-llamacpp perf-test vision-test model-rebuild clean prune
+	logs-vllm-planner logs-vllm-coder logs-vllm-fastcoder logs-vllm-gateway \
+	ps-main ps-falkor ps-falkordb ps-falkordb-mcp ps-unsloth ps-llama ps-vllm ps-all \
+	gpu-host gpu-smoke-llamacpp smoke-vllm perf-test vision-test model-rebuild clean prune
 
 help:
 	@printf "\nllama_infra utility targets\n\n"
@@ -72,6 +85,22 @@ help-verbose:
 	@printf "  make down-falkordb-mcp   # Stop FalkorDB MCP only\n"
 	@printf "  make down-falkor         # Stop FalkorDB + MCP stack\n"
 	@printf "  make down-unsloth        # Stop Unsloth stack\n"
+	@printf "\nvLLM stack (Ollama replacement — gateway on port 11434):\n"
+	@printf "  NOTE: vLLM and Ollama are mutually exclusive (both bind 11434).\n"
+	@printf "        Stop Ollama with 'make down-main' before starting vLLM.\n"
+	@printf "  make up-vllm             # Build + start all 3 engines + LiteLLM gateway\n"
+	@printf "  make up-vllm-planner     # Start planner engine only\n"
+	@printf "  make up-vllm-coder       # Start coder engine only\n"
+	@printf "  make up-vllm-fastcoder   # Start fastcoder engine only\n"
+	@printf "  make down-vllm           # Stop the vLLM stack\n"
+	@printf "  make build-vllm          # Build custom vLLM image\n"
+	@printf "  make download-vllm-models  # Pre-download HF models to \${MODELS}/vllm/\n"
+	@printf "  make config-vllm         # Render vLLM compose config\n"
+	@printf "  make ps-vllm             # Show vLLM container status\n"
+	@printf "  make logs-vllm-planner   # Follow planner engine logs\n"
+	@printf "  make logs-vllm-coder     # Follow coder engine logs\n"
+	@printf "  make logs-vllm-fastcoder # Follow fastcoder engine logs\n"
+	@printf "  make logs-vllm-gateway   # Follow gateway (LiteLLM) logs\n"
 	@printf "\nllama.cpp stack:\n"
 	@printf "  make up-llamacpp         # Start the native llama.cpp server\n"
 	@printf "  make build-llamacpp      # Build the native llama.cpp server image\n"
@@ -131,6 +160,10 @@ help-verbose:
 	@printf "  UNSLOTH_VERSION        : 2026.5.9-pt2.10.0-vllm-0.16.0-cu12.8-studio-release-v0.1.43-beta-2026-MAY-31\n"
 	@printf "  IMAGE                  : ghcr.io/ggml-org/llama.cpp:full-cuda-b5350\n"
 	@printf "  LLAMA_CPP_VERSION      : 0.3.30\n"
+	@printf "  VLLM_VERSION           : v0.25.0-cu129-ubuntu2404\n"
+	@printf "  LITELLM_VERSION        : 1.92.0\n"
+	@printf "  HF_DOWNLOADER_VERSION  : 0.1.0\n"
+	@printf "  VLLM_GATEWAY_PORT      : 11434\n"
 	@printf "  DATA_DIR               : ./data\n"
 	@printf "  REGISTRY               : llamacpp-server-python\n"
 	@printf "  GPU_ID                 : 0\n"
@@ -151,7 +184,24 @@ config-llama:
 config-open-webui:
 	$(COMPOSE_CORE) config open-webui
 
-config-all: config-main config-falkor config-unsloth config-llama config-open-webui
+config-vllm:
+	$(COMPOSE_VLLM) config
+
+config-all: config-main config-falkor config-unsloth config-llama config-open-webui config-vllm
+
+# Build (custom Dockerfiles)
+build-vllm:
+	$(COMPOSE_VLLM) build --pull vllm-planner vllm-coder vllm-fastcoder
+
+# Smoke test — verify compose config + upstream image tag before building
+smoke-vllm:
+	$(COMPOSE_VLLM) config > /dev/null && echo "compose OK" || (echo "compose FAILED"; exit 1)
+	docker pull vllm/vllm-openai:${VLLM_VERSION:-v0.25.0-cu129-ubuntu2404}
+	docker pull ghcr.io/berriai/litellm:${LITELLM_VERSION:-1.92.0}
+
+pull-vllm-base:
+	docker pull vllm/vllm-openai:${VLLM_VERSION:-v0.25.0-cu129-ubuntu2404}
+	docker pull ghcr.io/berriai/litellm:${LITELLM_VERSION:-1.92.0}
 
 pull-main:
 	$(COMPOSE_CORE) pull
@@ -180,7 +230,7 @@ pull-llamacpp:
 pull-llamacpp-py:
 	$(COMPOSE_LLAMA) pull llamacpp-server-py
 
-pull-all: pull-main pull-falkor pull-unsloth pull-llama pull-open-webui
+pull-all: pull-main pull-falkor pull-unsloth pull-llama pull-open-webui pull-vllm-base
 
 build-llamacpp:
 	$(COMPOSE_LLAMA) build llamacpp-server
@@ -248,8 +298,21 @@ up-llamacpp:
 up-llamacpp-py:
 	$(COMPOSE_LLAMA) up -d llamacpp-server-py
 
-up-llama:
-	$(COMPOSE_LLAMA) up -d llamacpp-server llamacpp-server-py
+# vLLM stack — gateway on 11434 (mutually exclusive with Ollama)
+up-vllm: build-vllm
+	$(COMPOSE_VLLM) up -d
+
+up-vllm-planner: build-vllm
+	$(COMPOSE_VLLM) up -d vllm-planner
+
+up-vllm-coder: build-vllm
+	$(COMPOSE_VLLM) up -d vllm-coder
+
+up-vllm-fastcoder: build-vllm
+	$(COMPOSE_VLLM) up -d vllm-fastcoder
+
+download-vllm-models: build-vllm
+	$(COMPOSE_VLLM_DL) --profile download up --remove-orphans
 
 down-main:
 	$(COMPOSE_CORE) down
@@ -269,7 +332,10 @@ down-unsloth:
 down-llama:
 	$(COMPOSE_LLAMA) down
 
-down-all: down-main down-falkordb down-falkordb-mcp down-unsloth down-llama
+down-vllm:
+	$(COMPOSE_VLLM) down
+
+down-all: down-main down-falkor down-unsloth down-llama down-vllm
 
 restart-ollama:
 	$(COMPOSE_CORE) restart ollama-server
@@ -295,6 +361,16 @@ restart-llamacpp:
 restart-llamacpp-py:
 	$(COMPOSE_LLAMA) restart llamacpp-server-py
 
+# vLLM restart targets
+restart-vllm-planner:
+	$(COMPOSE_VLLM) restart vllm-planner
+
+restart-vllm-coder:
+	$(COMPOSE_VLLM) restart vllm-coder
+
+restart-vllm-fastcoder:
+	$(COMPOSE_VLLM) restart vllm-fastcoder
+
 logs-ollama:
 	$(COMPOSE_CORE) logs -f --tail=200 ollama-server
 
@@ -319,6 +395,19 @@ logs-llamacpp:
 logs-llamacpp-py:
 	$(COMPOSE_LLAMA) logs -f --tail=200 llamacpp-server-py
 
+# vLLM log targets
+logs-vllm-planner:
+	$(COMPOSE_VLLM) logs -f --tail=200 vllm-planner
+
+logs-vllm-coder:
+	$(COMPOSE_VLLM) logs -f --tail=200 vllm-coder
+
+logs-vllm-fastcoder:
+	$(COMPOSE_VLLM) logs -f --tail=200 vllm-fastcoder
+
+logs-vllm-gateway:
+	$(COMPOSE_VLLM) logs -f --tail=200 vllm-gateway
+
 ps-main:
 	$(COMPOSE_CORE) ps
 
@@ -337,7 +426,10 @@ ps-unsloth:
 ps-llama:
 	$(COMPOSE_LLAMA) ps
 
-ps-all: ps-main ps-falkordb ps-falkordb-mcp ps-unsloth ps-llama
+ps-vllm:
+	$(COMPOSE_VLLM) ps
+
+ps-all: ps-main ps-falkor ps-unsloth ps-llama ps-vllm
 
 logs-all:
 	@printf "Tailing logs from all containers...\n"

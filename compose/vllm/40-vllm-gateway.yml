@@ -1,0 +1,20 @@
+services:
+  vllm-gateway:
+    image: ghcr.io/berriai/litellm:${LITELLM_VERSION:-1.92.0}
+    container_name: vllm-gateway
+    ports:
+      - "${VLLM_GATEWAY_PORT:-11434}:8000"
+    volumes:
+      - ./workspace/vllm/litellm_config.yaml:/app/config.yaml:ro
+    networks:
+      - vllm-bridge
+      - ollama-bridge
+    depends_on:
+      vllm-planner:
+        condition: service_healthy
+      vllm-coder:
+        condition: service_healthy
+      vllm-fastcoder:
+        condition: service_healthy
+    restart: always
+    command: ["--config", "/app/config.yaml", "--port", "8000", "--host", "0.0.0.0"]

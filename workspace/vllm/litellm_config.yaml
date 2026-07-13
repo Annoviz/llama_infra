@@ -1,0 +1,18 @@
+model_list:
+  - model_name: planner
+    litellm_params:
+      model: hosted_vllm/planner
+      api_base: http://vllm-planner:8000/v1
+
+  - model_name: coder
+    litellm_params:
+      model: hosted_vllm/coder
+      api_base: http://vllm-coder:8000/v1
+
+  - model_name: fast-coder
+    litellm_params:
+      model: hosted_vllm/fast-coder
+      api_base: http://vllm-fastcoder:8000/v1
+
+litellm_settings:
+  drop_unsupported_params: true

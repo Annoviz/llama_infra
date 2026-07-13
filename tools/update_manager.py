@@ -35,6 +35,10 @@ DOCKER_COMPOSE_FALKORDB_MCP = ROOT / "compose/main/50-falkordb-mcp.yml"
 DOCKER_COMPOSE_UNSLOTH = ROOT / "compose/main/60-unsloth.yml"
 DOCKER_COMPOSE_LLAMA = ROOT / "docker-compose.llama.cpp.yml"
 DOCKERFILE_LLAMA_PY = ROOT / "compose/llama/Dockerfile.llamacpp-server-python"
+DOCKER_COMPOSE_VLLM_ENGINE_BASE = ROOT / "compose/vllm/05-vllm-engine-base.yml"
+DOCKER_COMPOSE_VLLM_GATEWAY = ROOT / "compose/vllm/40-vllm-gateway.yml"
+DOCKERFILE_VLLM = ROOT / "compose/vllm/Dockerfile.vllm"
+
 REQ_DEV = ROOT / "requirements-dev.txt"
 REQ_FROZEN = ROOT / "workspace/requirements.txt"
 
@@ -320,6 +324,55 @@ def discover_docker_updates() -> List[UpdateItem]:
                 )
             )
 
+    # vLLM — check Docker Hub for latest <semver>-cu129-ubuntu2404 tag
+    if DOCKERFILE_VLLM.exists():
+        vllm_text = DOCKERFILE_VLLM.read_text(encoding="utf-8")
+        current_vllm = re.search(r"ARG VLLM_VERSION=(v?\d+\.\d+\.\d+-cu\d+-ubuntu\d+)", vllm_text)
+        if current_vllm:
+            try:
+                tags = docker_hub_tags("vllm/vllm-openai")
+                cuda_tags = [t for t in tags if re.match(r"^v?\d+\.\d+\.\d+-cu\d+-ubuntu\d+$", t)]
+                latest = sorted(cuda_tags, key=version_key)[-1] if cuda_tags else None
+            except (error.HTTPError, error.URLError):
+                latest = None
+            if latest:
+                items.append(
+                    UpdateItem(
+                        kind="docker",
+                        name="vllm/vllm-openai (CUDA)",
+                        source_file=DOCKERFILE_VLLM,
+                        current=current_vllm.group(1),
+                        latest=latest,
+                        applyable=is_newer(latest, current_vllm.group(1)),
+                        reason="Docker Hub <semver>-cu*-ubuntu* tag",
+                    )
+                )
+
+    # LiteLLM — check PyPI for latest stable version (no pre-releases)
+    if DOCKER_COMPOSE_VLLM_GATEWAY.exists():
+        gw_text = DOCKER_COMPOSE_VLLM_GATEWAY.read_text(encoding="utf-8")
+        current_litellm = re.search(r"\$\{LITELLM_VERSION:-([^}]+)\}", gw_text)
+        if current_litellm:
+            try:
+                latest = latest_pypi_version("litellm")
+                # Skip pre-releases (rc, dev, a, b, alpha, beta)
+                if latest and re.search(r"(rc|dev|a|b|alpha|beta)", latest, re.I):
+                    latest = None
+            except (error.HTTPError, error.URLError):
+                latest = None
+            if latest:
+                items.append(
+                    UpdateItem(
+                        kind="docker",
+                        name="ghcr.io/berriai/litellm",
+                        source_file=DOCKER_COMPOSE_VLLM_GATEWAY,
+                        current=current_litellm.group(1),
+                        latest=latest,
+                        applyable=is_newer(latest, current_litellm.group(1)),
+                        reason="PyPI (stable only)",
+                    )
+                )
+
     return items
 
 
@@ -473,6 +526,43 @@ def build_replacements(items: Sequence[UpdateItem]) -> List[Replacement]:
                     new=r"ARG LLAMA_CPP_VERSION=" + item.latest,
                 )
             )
+        elif item.name == "vllm/vllm-openai (CUDA)":
+            # Update Dockerfile ARG
+            replacements.append(
+                Replacement(
+                    source_file=DOCKERFILE_VLLM,
+                    old=f"ARG VLLM_VERSION={item.current}",
+                    new=f"ARG VLLM_VERSION={item.latest}",
+                )
+            )
+            # Update compose file build arg/image fallback defaults
+            if DOCKER_COMPOSE_VLLM_ENGINE_BASE.exists():
+                base_text = DOCKER_COMPOSE_VLLM_ENGINE_BASE.read_text(encoding="utf-8")
+                if f"${{VLLM_VERSION:-{item.current}}}" in base_text:
+                    replacements.append(
+                        Replacement(
+                            source_file=DOCKER_COMPOSE_VLLM_ENGINE_BASE,
+                            old=f"VLLM_VERSION: ${{VLLM_VERSION:-{item.current}}}",
+                            new=f"VLLM_VERSION: ${{VLLM_VERSION:-{item.latest}}}",
+                        )
+                    )
+                    replacements.append(
+                        Replacement(
+                            source_file=DOCKER_COMPOSE_VLLM_ENGINE_BASE,
+                            old=f"image: llama-infra-vllm:{item.current}",
+                            new=f"image: llama-infra-vllm:{item.latest}",
+                        )
+                    )
+
+        elif item.name == "ghcr.io/berriai/litellm":
+            replacements.append(
+                Replacement(
+                    source_file=DOCKER_COMPOSE_VLLM_GATEWAY,
+                    old=r"${LITELLM_VERSION:-" + item.current + "}",
+                    new=r"${LITELLM_VERSION:-" + item.latest + "}",
+                )
+            )
+
         elif item.source_file == REQ_DEV:
             # Keep existing operator style while bumping version constraints.
             file_text = REQ_DEV.read_text(encoding="utf-8")

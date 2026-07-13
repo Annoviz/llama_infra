@@ -1,0 +1,18 @@
+# syntax=docker/dockerfile:1
+ARG VLLM_VERSION=v0.25.0-cu129-ubuntu2404
+FROM vllm/vllm-openai:${VLLM_VERSION}
+
+LABEL maintainer="llama_infra" \
+      org.opencontainers.image.source="https://github.com/user/llama_infra"
+
+# Install huggingface_hub for cache checking at startup (pinned via ARG)
+ARG HUGGINGFACE_HUB_VERSION=0.35.0
+RUN pip install --no-cache-dir "huggingface_hub==${HUGGINGFACE_HUB_VERSION}"
+
+# Entrypoint handles: (1) model cache check, (2) exec vllm serve
+COPY scripts/entrypoint.vllm.sh /app/entrypoint.sh
+RUN chmod +x /app/entrypoint.sh
+COPY scripts/hf_download.sh /app/hf_download.sh
+RUN chmod +x /app/hf_download.sh
+
+ENTRYPOINT ["/app/entrypoint.sh"]

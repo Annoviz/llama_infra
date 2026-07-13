@@ -8,15 +8,17 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Architecture
 
-Two independent Docker stacks:
+Three independent Docker stacks:
 
 1. **Main stack** (`compose/main/*.yml`, assembled via `Makefile`): `ollama-server` + `anythingllm` + `open-webui` (+ optional FalkorDB MCP services)
 2. **llama.cpp stack** (`docker-compose.llama.cpp.yml`): native C++ server + Python server
+3. **vLLM stack** (`compose/vllm/*.yml`, assembled via `Makefile`): three vLLM engines (planner, coder, fastcoder) behind a LiteLLM gateway on port 11434 — drop-in Ollama replacement
 
-These stacks are intentionally separate; do not assume cross-stack compatibility.
+The main and vLLM stacks are **mutually exclusive** on port 11434. Stop one before starting the other (`make down-main` / `make down-vllm`).
 
 Key directories:
 - `workspace/models/` — Ollama Modelfiles, llama.cpp JSON configs, `models-config.yaml` (model sync contract)
+- `workspace/vllm/` — vLLM LiteLLM gateway config and model registry (`vllm-models.yaml`)
 - `workspace/requirements.txt` — frozen Python dependency snapshot (never edit directly)
 - `tools/update_manager.py` — checks/applies Docker tag and Python package updates
 - `tools/check_agent_docs.py` — validates `.github/agents/*.md` structure
@@ -38,14 +40,20 @@ Key directories:
 
 ### Docker stacks
 ```bash
-make up-main            # Start Ollama + AnythingLLM + Open WebUI
-make up-ollama          # Start Ollama only
-make up-llamacpp        # Start native llama.cpp server
-make up-llamacpp-py     # Start Python llama-cpp server
+# Main stack (Ollama + AnythingLLM + Open WebUI)
+make up-main            # Start main stack
 make down-main          # Stop main stack
+
+# vLLM stack — gateway on port 11434, MUTUALLY EXCLUSIVE with Ollama
+make up-vllm            # Build + start all 3 engines + LiteLLM gateway
+make down-vllm          # Stop vLLM stack
+make download-vllm-models  # Pre-download HF models to ${MODELS}/vllm/
+
+# llama.cpp stack
+make up-llamacpp        # Start native llama.cpp server
 make down-llama         # Stop llama.cpp stack
-make logs-ollama        # Follow Ollama logs
-make ps-all             # Show containers in both stacks
+
+make ps-all             # Show containers in all stacks
 ```
 
 ### Model management

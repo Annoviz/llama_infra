@@ -1,0 +1,6 @@
+networks:
+  vllm-bridge:
+    driver: bridge
+  ollama-bridge:
+    external: true
+    name: llama_infra_ollama-bridge
