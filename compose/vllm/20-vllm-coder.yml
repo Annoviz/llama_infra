@@ -31,8 +31,8 @@ services:
       VLLM_MODEL_REPO: "Qwen/Qwen3.6-27B-FP8"
       VLLM_SERVED_NAME: "coder"
       VLLM_MAX_LEN: "8192"
-      VLLM_GPU_MEM: "0.45"
-      VLLM_EXTRA_FLAGS: "--trust-remote-code --reasoning-parser qwen3"
+      VLLM_GPU_MEM: "0.90"
+      VLLM_EXTRA_FLAGS: "--attention-backend flashinfer --trust-remote-code --reasoning-parser qwen3 --enable-chunked-prefill --max-num-seqs 256 --kv-cache-dtype fp8"
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/v1/models"]
       interval: 30s

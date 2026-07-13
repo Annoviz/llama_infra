@@ -5,25 +5,25 @@ models:
     served_name: planner
     hf_repo: Qwen/Qwen3.6-35B-A3B-FP8
     format: fp8
-    gpu_memory_utilization: 0.45
+    gpu_memory_utilization: 0.92
     max_model_len: 16384
     multimodal: true
-    extra_flags: "--mm-encoder-tp-mode data --reasoning-parser qwen3 --trust-remote-code"
+    extra_flags: "--mm-encoder-tp-mode data --reasoning-parser qwen3 --trust-remote-code --enable-chunked-prefill --max-num-seqs 256 --kv-cache-dtype fp8"
 
   - id: coder
     served_name: coder
     hf_repo: Qwen/Qwen3.6-27B-FP8
     format: fp8
-    gpu_memory_utilization: 0.45
+    gpu_memory_utilization: 0.90
     max_model_len: 8192
     multimodal: false
-    extra_flags: "--trust-remote-code --reasoning-parser qwen3"
+    extra_flags: "--attention-backend flashinfer --trust-remote-code --reasoning-parser qwen3 --enable-chunked-prefill --max-num-seqs 256 --kv-cache-dtype fp8"
 
   - id: fast-coder
     served_name: fast-coder
     hf_repo: Qwen/Qwen3.5-4B
     format: fp16
-    gpu_memory_utilization: 0.09
+    gpu_memory_utilization: 0.85
     max_model_len: 4096
     multimodal: true
-    extra_flags: "--trust-remote-code --mm-encoder-tp-mode data"
+    extra_flags: "--attention-backend flashinfer --trust-remote-code --enable-chunked-prefill --max-num-seqs 256 --kv-cache-dtype fp8"

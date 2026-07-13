@@ -31,8 +31,8 @@ services:
       VLLM_MODEL_REPO: "Qwen/Qwen3.5-4B"
       VLLM_SERVED_NAME: "fast-coder"
       VLLM_MAX_LEN: "4096"
-      VLLM_GPU_MEM: "0.09"
-      VLLM_EXTRA_FLAGS: "--trust-remote-code --mm-encoder-tp-mode data"
+      VLLM_GPU_MEM: "0.85"
+      VLLM_EXTRA_FLAGS: "--attention-backend flashinfer --trust-remote-code --enable-chunked-prefill --max-num-seqs 256 --kv-cache-dtype fp8"
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/v1/models"]
       interval: 30s
