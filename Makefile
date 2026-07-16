@@ -50,7 +50,7 @@ LLAMA_CPP_IMAGE ?= ghcr.io/ggml-org/llama.cpp:full-cuda13
 	config-main config-falkor config-llama config-vllm config-all \
 	config-unsloth config-open-webui \
 	pull-main pull-ollama pull-open-webui pull-falkor pull-falkordb pull-falkordb-mcp pull-unsloth pull-llama pull-vllm-base pull-all \
-	build-llamacpp build-llamacpp-py build-vllm models-sync \
+	build-llamacpp-py build-vllm models-sync \
 	updates-check updates-suggest updates-apply \
 	check-agent-docs verify-agent-routing check-doc-links \
 	precommit-install precommit-run precommit-update \
@@ -104,13 +104,12 @@ help-verbose:
 	@printf "  make logs-vllm-fastcoder # Follow fastcoder engine logs\n"
 	@printf "  make logs-vllm-gateway   # Follow gateway (LiteLLM) logs\n"
 	@printf "\nllama.cpp stack:\n"
-	@printf "  make up-llamacpp         # Start the native llama.cpp server\n"
-	@printf "  make build-llamacpp      # Build the native llama.cpp server image\n"
+	@printf "  make up-llamacpp         # Start the native llama.cpp server (port: ${LLAMA_CPP_PORT:-8080})\n"
 	@printf "  make build-llamacpp-py   # Build the python llama-cpp server image\n"
 	@printf "  make up-llamacpp-py      # Start the python llama-cpp server\n"
 	@printf "  NOTE: Router mode and Ollama/vLLM are mutually exclusive (both bind 11434).\n"
 	@printf "        Stop one before starting another.\n"
-	@printf "  make up-llamacpp-router  # Start llama.cpp router mode (multi-model, port 11434)\n"
+	@printf "  make up-llamacpp-router  # Start llama.cpp router mode (multi-model, port: ${LLAMA_ROUTER_PORT:-11434})\n"
 	@printf "  make down-llama          # Stop the llama.cpp stack\n"
 	@printf "\nBenchmarks:\n"
 	@printf "  make perf-test [ARGS='--model foo --iterations 5']\n"
@@ -167,6 +166,9 @@ help-verbose:
 	@printf "  FALKORDB_MCP_VERSION   : 1.2.2\n"
 	@printf "  UNSLOTH_VERSION        : 2026.5.9-pt2.10.0-vllm-0.16.0-cu12.8-studio-release-v0.1.43-beta-2026-MAY-31\n"
 	@printf "  LLAMA_CPP_IMAGE          : ghcr.io/ggml-org/llama.cpp:full-cuda13\n"
+	@printf "  LLAMA_CPP_PORT           : 8080\n"
+	@printf "  LLAMA_ROUTER_PORT        : 21434\n"
+	@printf "  LLAMA_ROUTER_MODELS_MAX  : 2\n"
 	@printf "  LLAMA_CPP_VERSION      : 0.3.30\n"
 	@printf "  VLLM_VERSION           : v0.25.0-cu129-ubuntu2404\n"
 	@printf "  LITELLM_VERSION        : 1.92.0\n"
@@ -239,9 +241,6 @@ pull-llamacpp-py:
 	$(COMPOSE_LLAMA) pull llamacpp-server-py
 
 pull-all: pull-main pull-falkor pull-unsloth pull-llama pull-open-webui pull-vllm-base
-
-build-llamacpp:
-	$(COMPOSE_LLAMA) build llamacpp-server
 
 build-llamacpp-py:
 	$(COMPOSE_LLAMA) build llamacpp-server-py
@@ -497,7 +496,14 @@ model-rebuild:
 # ── Vision (multimodal image understanding) test ──────────────────────────────
 
 vision-test:
-	@python3 scripts/vision_test.py $(IMAGE) --model $(MODEL) --prompt "$(PROMPT)" --max-tokens $(MAX_TOKENS) --base-url $(OLLAMA_BASE_URL) --timeout $(TIMEOUT)
+	@python3 scripts/vision_test.py \
+		$(IMAGE) \
+		--model $(MODEL) \
+		--prompt "$(PROMPT)" \
+		--max-tokens "$${MAX_TOKENS:-512}" \
+		--base-url "$${OLLAMA_BASE_URL:-http://localhost:11434}" \
+		--api-format "$${API_FORMAT:-ollama}" \
+		--timeout "$${TIMEOUT:-300}"
 
 
 # ── Vision benchmark (structured results + regression baseline) ───────────────

@@ -12,8 +12,8 @@ fi
 
 echo "[llama-router] Preset: ${PRESET}, max models: ${MODELS_MAX}, port: ${PORT}"
 
-exec llama-server \
-    --model-preset "${PRESET}" \
+exec /app/llama-server \
+    --models-preset "${PRESET}" \
     --models-max "${MODELS_MAX}" \
     --port "${PORT}" \
     --host "0.0.0.0"

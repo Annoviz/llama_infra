@@ -4,7 +4,7 @@ services:
   llamacpp-server:
     image: ${LLAMA_CPP_IMAGE:-ghcr.io/ggml-org/llama.cpp:full-cuda13}
     shm_size: '8gb'
-    entrypoint: ${ENTRYPOINT:-/app/llama-server} # default entrypoint: /app/tools.sh
+    entrypoint: ${ENTRYPOINT:-/app/llama-server} # default entrypoint: /app/llama-server
     deploy:
       resources:
         reservations:
@@ -13,7 +13,7 @@ services:
               device_ids: ["${GPU_ID:-0}"]
               capabilities: [gpu]
     ports:
-      - 8080:8080
+      - "${LLAMA_CPP_PORT:-8080}:8080"
     volumes:
       - ${MODELS:-./models}:/models
     environment:

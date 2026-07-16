@@ -1,6 +1,53 @@
-# llama.cpp Router Mode — Implementation Plan
+# llama.cpp Router Mode — Implementation & Changes
 
-**Status**: Draft — not yet implemented. VLLM plan is the structural reference.
+**Status**: Implemented (2026-07-16). Router starts, all 3 models registered, vision test passes.
+
+## Changelog (2026-07-16)
+
+### Bug Fixes
+
+#### Entrypoint — `scripts/entrypoint.llamacpp-router.sh`
+- **Line 15**: `llama-server` → `/app/llama-server` (binary at `/app/`, not in container PATH)
+- **Line 16**: `--model-preset` → `--models-preset` (CLI flag is plural per `--help`)
+
+#### Preset INI — `workspace/models/router-preset.ini`
+Preset parser uses **CLI flag names** (hyphenated), not env var names (underscored):
+- `[*]`: `n_parallel` → `parallel`
+- All models: `n_batch` → `batch-size`
+- All models: `top_p` → `top-p`
+- planner: `n_predict` → `n-predict`
+
+#### Compose — `compose/llama/15-llamacpp-router.yml`
+- Removed `networks:` block entirely (`llamacpp-bridge` unused, `ollama-bridge` was fragile cross-stack dependency)
+
+#### Compose — `compose/llama/10-llamacpp-native.yml`
+- Port: `8080:8080` → `${LLAMA_CPP_PORT:-8080}:8080` (env override)
+- Comment: fixed misleading `# default entrypoint: /app/tools.sh`
+
+#### Makefile
+- Removed `build-llamacpp` target (no Dockerfile for native image — it's pre-built)
+- Added `LLAMA_CPP_PORT`, `LLAMA_ROUTER_PORT`, `LLAMA_ROUTER_MODELS_MAX` to env docs
+- Fixed vision-test: shell-side defaults (`$${VAR:-default}`) instead of Make `$(VAR:-default)` which breaks when Bash passes empty env vars
+- Added `--api-format` and `API_FORMAT` variable to vision-test
+
+#### Vision test — `scripts/vision_test.py`
+- Added OpenAI API support via `vision_generate_openai()` using `/v1/chat/completions`
+- New `--api-format` CLI flag: `ollama` (default) or `openai`
+- Updated dispatcher and main to pass `mime_type` and `api_format`
+
+#### `.env`
+- Added `LLAMA_CPP_PORT=8080`
+
+### Verification
+```bash
+make up-llamacpp-router
+# Container: healthy, 3 models registered (planner, coder, fast-coder)
+# API: curl http://localhost:21434/v1/models → 200 OK
+
+make vision-test MODEL=fast-coder IMAGE=workspace/data/person.png \
+  OLLAMA_BASE_URL=http://localhost:21434 API_FORMAT=openai
+# Result: 272 tokens, 67 TPS, correct image description
+```
 
 ## Goal
 
