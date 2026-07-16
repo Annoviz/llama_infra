@@ -60,7 +60,7 @@ Applied per model via `VLLM_EXTRA_FLAGS`:
 | `compose/vllm/40-vllm-gateway.yml` | LiteLLM gateway |
 | `compose/vllm/90-vllm-download.yml` | Pre-download services |
 | `scripts/entrypoint.vllm.sh` | HF cache check → exec vllm serve |
-| `workspace/vllm/litellm_config.yaml` | Gateway route config |
+| `workspace/vllm/litellm_config.yaml` | Gateway route config (`hosted_vllm/` model type) |
 | `workspace/vllm/vllm-models.yaml` | Model registry (machine-readable) |
 
 ## Make Targets
