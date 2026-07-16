@@ -1,0 +1,8 @@
+# llama.cpp router stack — shared networks
+
+networks:
+  ollama-local:
+    driver: bridge
+  ollama-bridge:
+    external: true
+    name: llama_infra_ollama-bridge

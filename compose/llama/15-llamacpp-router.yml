@@ -8,6 +8,9 @@ services:
     entrypoint: ["/app/scripts/entrypoint.llamacpp-router.sh"]
     ulimits:
       memlock: -1
+    networks:
+      - ollama-local
+      - ollama-bridge
     deploy:
       resources:
         reservations:
@@ -16,7 +19,7 @@ services:
               device_ids: ["${GPU_ID:-0}"]
               capabilities: [gpu]
     ports:
-      - "${LLAMA_ROUTER_PORT:-11434}:8080"  # Host port → container port (fixed at 8080)
+      - "${LLAMA_ROUTER_PORT:-8080}:8080"  # Host port → container port (fixed at 8080)
     volumes:
       - ${MODELS:-./models}:/models:ro
       - ./workspace/models/router-preset.ini:/app/router-preset.ini:ro

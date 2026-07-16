@@ -1,0 +1,22 @@
+# LiteLLM model definitions for llama.cpp router stack
+# Used by llamacpp-gateway to route Ollama API requests (port 11434)
+# to the llamacpp-router's OpenAI-compatible backend (port 8080).
+
+model_list:
+  - model_name: planner
+    litellm_params:
+      model: openai/planner
+      api_base: http://llamacpp-router:8080/v1
+
+  - model_name: coder
+    litellm_params:
+      model: openai/coder
+      api_base: http://llamacpp-router:8080/v1
+
+  - model_name: fast-coder
+    litellm_params:
+      model: openai/fast-coder
+      api_base: http://llamacpp-router:8080/v1
+
+litellm_settings:
+  drop_unsupported_params: true

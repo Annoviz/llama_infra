@@ -33,7 +33,9 @@ COMPOSE_LLAMA := docker compose --project-directory $(CURDIR) \
 	-f compose/llama/10-llamacpp-native.yml \
 	-f compose/llama/20-llamacpp-py.yml
 COMPOSE_LLAMA_ROUTER := docker compose --project-directory $(CURDIR) \
-	-f compose/llama/15-llamacpp-router.yml
+	-f compose/llama/05-llamacpp-router-networks.yml \
+	-f compose/llama/15-llamacpp-router.yml \
+	-f compose/llama/25-llamacpp-router-gateway.yml
 COMPOSE_VLLM := docker compose --project-directory $(CURDIR) \
 	-f compose/vllm/00-vllm-networks.yml \
 	-f compose/vllm/05-vllm-engine-base.yml \
@@ -47,7 +49,7 @@ COMPOSE_VLLM_DL := docker compose --project-directory $(CURDIR) \
 LLAMA_CPP_IMAGE ?= ghcr.io/ggml-org/llama.cpp:full-cuda13
 
 .PHONY: help help-verbose \
-	config-main config-falkor config-llama config-vllm config-all \
+	config-main config-falkor config-llama config-llama-router config-vllm config-all \
 	config-unsloth config-open-webui \
 	pull-main pull-ollama pull-open-webui pull-falkor pull-falkordb pull-falkordb-mcp pull-unsloth pull-llama pull-vllm-base pull-all \
 	build-llamacpp-py build-vllm models-sync \
@@ -97,6 +99,7 @@ help-verbose:
 	@printf "  make down-vllm           # Stop the vLLM stack\n"
 	@printf "  make build-vllm          # Build custom vLLM image\n"
 	@printf "  make download-vllm-models  # Pre-download HF models to \${MODELS}/vllm/\n"
+	@printf "  make config-llama-router # Render llama.cpp router + gateway compose config\n"
 	@printf "  make config-vllm         # Render vLLM compose config\n"
 	@printf "  make ps-vllm             # Show vLLM container status\n"
 	@printf "  make logs-vllm-planner   # Follow planner engine logs\n"
@@ -167,7 +170,8 @@ help-verbose:
 	@printf "  UNSLOTH_VERSION        : 2026.5.9-pt2.10.0-vllm-0.16.0-cu12.8-studio-release-v0.1.43-beta-2026-MAY-31\n"
 	@printf "  LLAMA_CPP_IMAGE          : ghcr.io/ggml-org/llama.cpp:full-cuda13\n"
 	@printf "  LLAMA_CPP_PORT           : 8080\n"
-	@printf "  LLAMA_ROUTER_PORT        : 21434\n"
+	@printf "  LLAMA_ROUTER_PORT        : 8080 (internal container port)\n"
+	@printf "  VLLM_GATEWAY_PORT        : 11434 (Ollama drop-in replacement via LiteLLM gateway)\n"
 	@printf "  LLAMA_ROUTER_MODELS_MAX  : 2\n"
 	@printf "  LLAMA_CPP_VERSION      : 0.3.30\n"
 	@printf "  VLLM_VERSION           : v0.25.0-cu129-ubuntu2404\n"
@@ -191,13 +195,16 @@ config-unsloth:
 config-llama:
 	$(COMPOSE_LLAMA) config
 
+config-llama-router:
+	$(COMPOSE_LLAMA_ROUTER) config
+
 config-open-webui:
 	$(COMPOSE_CORE) config open-webui
 
 config-vllm:
 	$(COMPOSE_VLLM) config
 
-config-all: config-main config-falkor config-unsloth config-llama config-open-webui config-vllm
+config-all: config-main config-falkor config-unsloth config-llama config-llama-router config-open-webui config-vllm
 
 # Build (custom Dockerfiles)
 build-vllm:
