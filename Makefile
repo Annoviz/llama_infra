@@ -17,6 +17,10 @@ COMPOSE_FALKOR := docker compose --project-directory $(CURDIR) \
 	-f compose/main/00-networks-and-volumes.yml \
 	-f compose/main/40-falkordb.yml \
 	-f compose/main/50-falkordb-mcp.yml
+COMPOSE_GOTENBERG := docker compose --project-directory $(CURDIR) \
+	-f compose/gotenberg/00-networks.yml \
+	-f compose/gotenberg/10-gotenberg.yml \
+	-f compose/gotenberg/20-gotenberg-mcp.yml
 COMPOSE_UNSLOTH := docker compose --project-directory $(CURDIR) \
 	-f compose/main/00-networks-and-volumes.yml \
 	-f compose/main/60-unsloth.yml
@@ -50,17 +54,17 @@ LLAMA_CPP_IMAGE ?= ghcr.io/ggml-org/llama.cpp:full-cuda13
 
 .PHONY: help help-verbose \
 	config-main config-falkor config-llama config-llama-router config-vllm config-all \
-	config-unsloth config-open-webui \
-	pull-main pull-ollama pull-open-webui pull-falkor pull-falkordb pull-falkordb-mcp pull-unsloth pull-llama pull-vllm-base pull-all \
+	config-gotenberg config-unsloth config-open-webui \
+	pull-main pull-ollama pull-open-webui pull-falkor pull-falkordb pull-falkordb-mcp pull-gotenberg pull-unsloth pull-llama pull-vllm-base pull-all \
 	build-llamacpp-py build-vllm models-sync \
 	updates-check updates-suggest updates-apply \
 	check-agent-docs verify-agent-routing check-doc-links \
 	precommit-install precommit-run precommit-update \
-	up-ollama up-anythingllm up-open-webui up-main up-falkordb up-falkordb-mcp up-unsloth up-main-all \
+	up-ollama up-anythingllm up-open-webui up-main up-falkordb up-falkordb-mcp up-gotenberg up-unsloth up-main-all \
 	up-llamacpp up-llamacpp-py up-llama up-llamacpp-router \
 	up-vllm up-vllm-planner up-vllm-coder up-vllm-fastcoder download-vllm-models \
-	down-main down-falkor down-falkordb down-falkordb-mcp down-unsloth down-llama down-vllm down-llamacpp-router down-all \
-	restart-ollama restart-anythingllm restart-open-webui restart-falkordb restart-falkordb-mcp restart-unsloth restart-llamacpp restart-llamacpp-py \
+	down-main down-gotenberg down-falkor down-falkordb down-falkordb-mcp down-unsloth down-llama down-vllm down-llamacpp-router down-all \
+	restart-ollama restart-anythingllm restart-open-webui restart-falkordb restart-falkordb-mcp restart-gotenberg restart-unsloth restart-llamacpp restart-llamacpp-py \
 	restart-vllm-planner restart-vllm-coder restart-vllm-fastcoder restart-llamacpp-router \
 	logs-ollama logs-anythingllm logs-open-webui logs-falkordb logs-falkordb-mcp logs-unsloth logs-llamacpp logs-llamacpp-py logs-all \
 	logs-vllm-planner logs-vllm-coder logs-vllm-fastcoder logs-vllm-gateway \
@@ -82,9 +86,11 @@ help-verbose:
 	@printf "  make up-main             # Start Ollama + AnythingLLM + Open WebUI\n"
 	@printf "  make up-falkordb         # Start local FalkorDB service\n"
 	@printf "  make up-falkordb-mcp     # Start FalkorDB MCP server (depends on FalkorDB)\n"
+	@printf "  make up-gotenberg        # Start Gotenberg + MCP server for doc-to-PDF conversion\n"
 	@printf "  make up-unsloth          # Start Unsloth container (GPU + Jupyter/API)\n"
 	@printf "  make up-main-all         # Start core stack + FalkorDB + FalkorDB MCP\n"
 	@printf "  make down-main           # Stop the main stack\n"
+	@printf "  make down-gotenberg      # Stop Gotenberg + MCP server\n"
 	@printf "  make down-falkordb       # Stop FalkorDB only\n"
 	@printf "  make down-falkordb-mcp   # Stop FalkorDB MCP only\n"
 	@printf "  make down-falkor         # Stop FalkorDB + MCP stack\n"
@@ -167,6 +173,7 @@ help-verbose:
 	@printf "  OW_VERSION             : v0.8.11\n"
 	@printf "  FALKORDB_VERSION       : v4.18.10\n"
 	@printf "  FALKORDB_MCP_VERSION   : 1.2.2\n"
+	@printf "  GOTENBERG_IMAGE        : gotenberg/gotenberg:8\n"
 	@printf "  UNSLOTH_VERSION        : 2026.5.9-pt2.10.0-vllm-0.16.0-cu12.8-studio-release-v0.1.43-beta-2026-MAY-31\n"
 	@printf "  LLAMA_CPP_IMAGE          : ghcr.io/ggml-org/llama.cpp:full-cuda13\n"
 	@printf "  LLAMA_CPP_PORT           : 8080\n"
@@ -185,6 +192,9 @@ help-verbose:
 
 config-main:
 	$(COMPOSE_CORE) config
+
+config-gotenberg:
+	$(COMPOSE_GOTENBERG) config
 
 config-falkor:
 	$(COMPOSE_FALKOR) config
@@ -234,6 +244,9 @@ pull-falkordb:
 
 pull-falkordb-mcp:
 	$(COMPOSE_FALKOR) pull falkordb-mcpserver
+
+pull-gotenberg:
+	$(COMPOSE_GOTENBERG) pull
 
 pull-falkor:
 	$(COMPOSE_FALKOR) pull
@@ -294,6 +307,9 @@ up-open-webui:
 up-main:
 	$(COMPOSE_CORE) up -d ollama-server anythingllm open-webui
 
+up-gotenberg:
+	$(COMPOSE_GOTENBERG) up -d gotenberg gotenberg-mcp
+
 up-falkordb:
 	$(COMPOSE_FALKOR) up -d falkordb
 
@@ -345,6 +361,9 @@ download-vllm-models: build-vllm
 down-main:
 	$(COMPOSE_CORE) down
 
+down-gotenberg:
+	$(COMPOSE_GOTENBERG) down
+
 down-falkordb:
 	$(COMPOSE_FALKOR) down falkordb
 
@@ -373,6 +392,9 @@ restart-anythingllm:
 
 restart-open-webui:
 	$(COMPOSE_CORE) restart open-webui
+
+restart-gotenberg:
+	$(COMPOSE_GOTENBERG) restart gotenberg gotenberg-mcp
 
 restart-falkordb:
 	$(COMPOSE_FALKOR) restart falkordb
@@ -407,6 +429,9 @@ logs-anythingllm:
 
 logs-open-webui:
 	$(COMPOSE_CORE) logs -f --tail=200 open-webui
+
+logs-gotenberg:
+	$(COMPOSE_GOTENBERG) logs -f --tail=200 gotenberg
 
 logs-falkordb:
 	$(COMPOSE_FALKOR) logs -f --tail=200 falkordb
@@ -445,6 +470,9 @@ ps-falkordb:
 ps-falkordb-mcp:
 	$(COMPOSE_FALKOR) ps falkordb-mcpserver
 
+ps-gotenberg:
+	$(COMPOSE_GOTENBERG) ps
+
 ps-falkor:
 	$(COMPOSE_FALKOR) ps
 
@@ -460,7 +488,7 @@ ps-vllm:
 ps-llamacpp-router:
 	$(COMPOSE_LLAMA_ROUTER) ps
 
-ps-all: ps-main ps-falkor ps-unsloth ps-llama ps-vllm ps-llamacpp-router
+ps-all: ps-main ps-gotenberg ps-falkor ps-unsloth ps-llama ps-vllm ps-llamacpp-router
 
 logs-all:
 	@printf "Tailing logs from all containers...\n"

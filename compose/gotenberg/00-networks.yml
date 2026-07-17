@@ -1,0 +1,6 @@
+networks:
+  gotenberg-network:
+    driver: bridge
+
+volumes:
+  gotenberg-data:
