@@ -1,6 +1,7 @@
 services:
   vllm-fastcoder:
     build:
+      network: host
       context: .
       dockerfile: compose/vllm/Dockerfile.vllm
       args:

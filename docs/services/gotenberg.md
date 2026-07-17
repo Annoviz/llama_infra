@@ -32,10 +32,34 @@ gotenberg-mcp (FastMCP, :3015)  → convert_docx_to_pdf(), convert_xlsx_to_pdf()
 | `GOTENBERG_IMAGE` | `gotenberg/gotenberg:8` | Gotenberg Docker image tag |
 | `GOTENBERG_PORT` | `3010` | Host port for Gotenberg API |
 | `GOTENBERG_MCP_PORT` | `3015` | Host port for MCP server |
-| `MCP_TRANSPORT` | `http` | MCP transport type |
+| `MCP_TRANSPORT` | `streamable-http` | MCP transport type (`sse`, `streamable-http`, or `stdio`) |
 | `MCP_SERVER_PORT` | `8000` | Internal MCP container port |
 | `MCP_API_KEY` | (empty) | Optional API key auth for MCP |
 | `GOTENBERG_TIMEOUT` | `120` | HTTP timeout in seconds for conversions |
+
+## Claude MCP Add
+
+Add the Gotenberg MCP server to Claude Code:
+
+```bash
+claude mcp add gotenberg -- streamable-http http://localhost:3015/mcp
+```
+
+This registers all 20 tools (conversion, screenshot, PDF manipulation) as callable tools in Claude sessions.
+
+## Output File Access
+
+All conversion tools write output to `./output/<name>.pdf` **inside** the MCP container. The compose file mounts a host volume at `/app/output`, so files are accessible on the host at:
+
+```
+<project-root>/output/
+```
+
+For example, after calling `convert_docx_to_pdf`:
+- Container path (returned in tool response): `/app/output/report.pdf`
+- Host path (accessible from shell/Claude Code): `<repo>/output/report.pdf`
+
+**Important:** The `output_dir` parameter is relative to the container's working directory (`/app`). Always use absolute paths like `/app/output/myfile.pdf` or omit it entirely to use the default. Relative paths (e.g., `./output`) will be resolved inside the container and still land in `<repo>/output/` thanks to the volume mount.
 
 ## Make Targets
 

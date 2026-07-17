@@ -12,13 +12,9 @@ services:
     # Gotenberg runs Chromium and LibreOffice headless internally.
     # We disable the built-in webhook (not needed locally) and set
     # a generous timeout for large DOCX files.
-    command:
-      [
-        "gotenberg",
-        "--chromium-disable-web-security=true",
-        "--libre-log-console=false",
-        "--storage-driver-directory=/data/gotenberg",
-      ]
+    # Chromium needs web security disabled for cross-origin resources.
+    # The /data volume handles persistent storage (no --storage-driver-directory flag in v8).
+    command: ["gotenberg", "--chromium-disable-web-security=true"]
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
       interval: 15s

@@ -1,6 +1,7 @@
 services:
   vllm-coder:
     build:
+      network: host
       context: .
       dockerfile: compose/vllm/Dockerfile.vllm
       args:

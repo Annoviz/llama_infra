@@ -1,6 +1,7 @@
 services:
   _vllm-engine-base:
     build:
+      network: host
       context: .
       dockerfile: compose/vllm/Dockerfile.vllm
       args:

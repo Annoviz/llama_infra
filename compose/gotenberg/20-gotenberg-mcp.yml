@@ -1,14 +1,17 @@
 services:
   gotenberg-mcp:
     build:
-      context: .
+      network: host
+      context: ./compose/gotenberg
       dockerfile: Dockerfile.gotenberg-mcp
     container_name: gotenberg-mcp
     restart: unless-stopped
     ports:
       - "${GOTENBERG_MCP_PORT:-3015}:${MCP_SERVER_PORT:-8000}"
+    volumes:
+      - ./output:/app/output  # shared output dir — Claude Code reads PDFs from here
     environment:
-      - MCP_TRANSPORT=${MCP_TRANSPORT:-http}
+      - MCP_TRANSPORT=${MCP_TRANSPORT:-streamable-http}
       - MCP_SERVER_PORT=${MCP_SERVER_PORT:-8000}
       - MCP_API_KEY=${GOTENBERG_MCP_API_KEY:-${MCP_API_KEY:-}}
       - GOTENBERG_URL=http://gotenberg:3000
