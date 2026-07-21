@@ -4,6 +4,8 @@ services:
     container_name: vllm-gateway
     ports:
       - "${VLLM_GATEWAY_PORT:-11434}:8000"
+    environment:
+      OPENAI_API_KEY: "${OPENAI_API_KEY:-ollama}"
     volumes:
       - ./workspace/vllm/litellm_config.yaml:/app/config.yaml:ro
     networks:

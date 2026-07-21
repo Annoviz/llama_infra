@@ -5,18 +5,36 @@
 model_list:
   - model_name: planner
     litellm_params:
-      model: openai/planner
+      model: openai/gemma-4-31B
       api_base: http://llamacpp-router:8080/v1
 
   - model_name: coder
     litellm_params:
-      model: openai/coder
+      model: openai/qwen3.6-35B
+      api_base: http://llamacpp-router:8080/v1
+
+  - model_name: dense-coder
+    litellm_params:
+      model: openai/qwen3.6-27B
       api_base: http://llamacpp-router:8080/v1
 
   - model_name: fast-coder
     litellm_params:
-      model: openai/fast-coder
+      model: openai/qwen3.5-4B
       api_base: http://llamacpp-router:8080/v1
+      # Force parameters down to llama-server to turn thinking off
+      # extra_body: {
+      #   "reasoning": "off",
+      #   "chat_template_kwargs": {"enable_thinking": false}
+      # }      
 
 litellm_settings:
   drop_unsupported_params: true
+  # Change to true if debugging routing failures
+  set_verbose: false
+
+  # Enable automatic context window fallback handling
+  context_window_fallback_dict:
+    planner: ["fast-coder"]
+    dense-coder: ["fast-coder"]
+    coder: ["fast-coder"]
