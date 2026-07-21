@@ -76,6 +76,7 @@ def version_key(value: str) -> Tuple[int, ...]:
 
 def is_newer(latest: str, current: str) -> bool:
     # Floating CUDA tags (full-cuda13, full-cuda12) — always point to latest; never update
+    # We prefer explicit build tags (full-cuda-bXXXX) or manually frozen versions (full-cuda13-9982)
     cuda_ver = re.compile(r"^(?:full|light|server)-cuda(\d+)$")
     if cuda_ver.match(current):
         return False
@@ -301,6 +302,7 @@ def discover_docker_updates() -> List[UpdateItem]:
             all_tags = ghcr_tags("ggml-org/llama.cpp")
             # Prefer latest build-number tag (full-cuda-b####) — these are the real versioned tags.
             # Explicit CUDA ver tags (full-cuda13, full-cuda12) are floating aliases not in tags/list.
+            # Manual frozen versions (e.g., full-cuda13-9982) should be treated as fixed.
             legacy_build = latest_tag(all_tags, r"^full-cuda-b\d+$")
             fallback_plain = "full-cuda" if "full-cuda" in all_tags else None
             latest = legacy_build or fallback_plain

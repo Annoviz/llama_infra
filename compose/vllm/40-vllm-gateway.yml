@@ -1,6 +1,6 @@
 services:
   vllm-gateway:
-    image: ghcr.io/berriai/litellm:${LITELLM_VERSION:-1.92.0}
+    image: ghcr.io/berriai/litellm:${LITELLM_VERSION:-1.93.0}
     container_name: vllm-gateway
     ports:
       - "${VLLM_GATEWAY_PORT:-11434}:8000"

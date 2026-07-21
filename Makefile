@@ -50,7 +50,7 @@ COMPOSE_VLLM := docker compose --project-directory $(CURDIR) \
 COMPOSE_VLLM_DL := docker compose --project-directory $(CURDIR) \
 	-f compose/vllm/00-vllm-networks.yml \
 	-f compose/vllm/90-vllm-download.yml
-LLAMA_CPP_IMAGE ?= ghcr.io/ggml-org/llama.cpp:full-cuda13
+LLAMA_CPP_IMAGE ?= ghcr.io/ggml-org/llama.cpp:full-cuda-b4738
 
 .PHONY: help help-verbose \
 	config-main config-falkor config-llama config-llama-router config-vllm config-all \
@@ -175,7 +175,7 @@ help-verbose:
 	@printf "  FALKORDB_MCP_VERSION   : 1.2.2\n"
 	@printf "  GOTENBERG_IMAGE        : gotenberg/gotenberg:8\n"
 	@printf "  UNSLOTH_VERSION        : 2026.5.9-pt2.10.0-vllm-0.16.0-cu12.8-studio-release-v0.1.43-beta-2026-MAY-31\n"
-	@printf "  LLAMA_CPP_IMAGE          : ghcr.io/ggml-org/llama.cpp:full-cuda13\n"
+	@printf "  LLAMA_CPP_IMAGE          : ghcr.io/ggml-org/llama.cpp:full-cuda-b4738\n"
 	@printf "  LLAMA_CPP_PORT           : 8080\n"
 	@printf "  LLAMA_ROUTER_PORT        : 8080 (internal container port)\n"
 	@printf "  VLLM_GATEWAY_PORT        : 11434 (Ollama drop-in replacement via LiteLLM gateway)\n"

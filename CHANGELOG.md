@@ -1,4 +1,27 @@
 # Docker Image Update Changelog - March 26, 2026
+## Docker Image Updates - July 21, 2026
+
+**Note:** Each update was manually approved by the user via interactive prompt.
+
+
+### Updated Docker Images
+
+- **ollama/ollama**: `0.31.2` → `0.32.1`
+- **falkordb/falkordb**: `v4.18.11` → `v4.20.1`
+- **vllm/vllm-openai (CUDA)**: `v0.25.0-cu129-ubuntu2404` → `v0.25.1-cu129-ubuntu2404`
+- **ghcr.io/berriai/litellm**: `1.92.0` → `1.93.0`
+
+### Updated Python Packages
+
+- **llama-cpp-python[server]**: `0.3.33` → `0.3.34`
+- **aiohttp**: `3.14.1` → `3.14.2`
+- **fastapi**: `0.139.0` → `0.139.2`
+- **sse-starlette**: `3.4.5` → `3.4.6`
+- **hypothesis**: `6.156.4` → `6.158.0`
+- **ruff**: `0.15.20` → `0.15.22`
+
+---
+
 
 ## vLLM Stack — Added (July 13, 2026)
 

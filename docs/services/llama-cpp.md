@@ -282,7 +282,7 @@ make down-llamacpp-router && make up-main
 
 - GGUF files must exist in `${MODELS}/` matching preset paths exactly
 - mmproj files required for multimodal models (planner, fast-coder)
-- llama.cpp image version must support `--models-preset` flag (full-cuda13 tag includes it)
+- llama.cpp image version must support `--models-preset` flag (full-cuda-b4738 tag includes it)
 - External network `llama_infra_ollama-bridge` must exist (created by vLLM stack or manually)
 
 ### Debugging
@@ -312,7 +312,7 @@ nvidia-smi --query-gpu=memory.used,memory.total --format=csv,noheader
 
 | Variable | Default | Purpose |
 |----------|---------|---------|
-| `LLAMA_CPP_IMAGE` | `ghcr.io/ggml-org/llama.cpp:full-cuda13` | Base image for all llama.cpp services |
+| `LLAMA_CPP_IMAGE` | `ghcr.io/ggml-org/llama.cpp:full-cuda-b4738` | Base image for all llama.cpp services |
 | `LLAMA_ROUTER_PORT` | `8080` | Internal container port (not exposed to host directly) |
 | `LLAMA_ROUTER_MODELS_MAX` | `2` | Max concurrent models in VRAM |
 | `LLAMA_ROUTER_PRESET` | `/app/router-preset.ini` | Preset INI file path inside container |
