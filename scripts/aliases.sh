@@ -30,6 +30,7 @@ claude-set-local() {
   export CLAUDE_CODE_SUBAGENT_MODEL=fast-coder
   export CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC=1
   export DISABLE_TELEMETRY=1
+  export CLAUDE_CODE_DISABLE_EXPERIMENTAL_BETAS=1
   export CLAUDE_CONFIG_DIR=~/.claude-local
   echo "Configured Claude for local Ollama routing (team / work profile)"
 }
