@@ -35,11 +35,24 @@ DOCKER_COMPOSE_FALKORDB_MCP = ROOT / "compose/main/50-falkordb-mcp.yml"
 DOCKER_COMPOSE_UNSLOTH = ROOT / "compose/main/60-unsloth.yml"
 # llama.cpp stack — split compose files (replaced docker-compose.llama.cpp.yml)
 DOCKER_COMPOSE_LLAMA_NATIVE = ROOT / "compose/llama/10-llamacpp-native.yml"
+DOCKER_COMPOSE_LLAMA_ROUTER = ROOT / "compose/llama/15-llamacpp-router.yml"
 DOCKER_COMPOSE_LLAMA_PY = ROOT / "compose/llama/20-llamacpp-py.yml"
+DOCKER_COMPOSE_LLAMA_GATEWAY = ROOT / "compose/llama/25-llamacpp-router-gateway.yml"
 DOCKERFILE_LLAMA_PY = ROOT / "compose/llama/Dockerfile.llamacpp-server-python"
 DOCKER_COMPOSE_VLLM_ENGINE_BASE = ROOT / "compose/vllm/05-vllm-engine-base.yml"
 DOCKER_COMPOSE_VLLM_GATEWAY = ROOT / "compose/vllm/40-vllm-gateway.yml"
 DOCKERFILE_VLLM = ROOT / "compose/vllm/Dockerfile.vllm"
+
+MAKEFILE = ROOT / "Makefile"
+SERVICE_DOCS = [
+    ROOT / "docs/services/ollama.md",
+    ROOT / "docs/services/anythingllm.md",
+    ROOT / "docs/services/open-webui.md",
+    ROOT / "docs/services/falkordb.md",
+    ROOT / "docs/services/falkordb-mcp.md",
+    ROOT / "docs/services/unsloth.md",
+    ROOT / "docs/services/llama-cpp.md",
+]
 
 REQ_DEV = ROOT / "requirements-dev.txt"
 REQ_FROZEN = ROOT / "workspace/requirements.txt"
@@ -54,6 +67,7 @@ class UpdateItem:
     latest: str
     applyable: bool
     reason: str
+    date: Optional[str] = None
 
 
 @dataclass
@@ -112,13 +126,31 @@ def ghcr_token(namespace_repo: str) -> str:
     return token
 
 
+def get_ghcr_digest(namespace_repo: str, tag: str) -> Optional[str]:
+    token = ghcr_token(namespace_repo)
+    url = f"https://ghcr.io/v2/{namespace_repo}/manifests/{tag}"
+    req = request.Request(
+        url,
+        headers={
+            "Authorization": f"Bearer {token}",
+            "Accept": "application/vnd.docker.distribution.manifest.v2+json",
+        },
+    )
+    try:
+        with request.urlopen(req, timeout=10) as resp:
+            return resp.headers.get("Docker-Content-Digest")
+    except (error.HTTPError, error.URLError):
+        return None
+
+
 def ghcr_tags(namespace_repo: str) -> List[str]:
     token = ghcr_token(namespace_repo)
     data = fetch_json(
         f"https://ghcr.io/v2/{namespace_repo}/tags/list",
         headers={"Authorization": f"Bearer {token}"},
     )
-    return data.get("tags", []) or []
+    tags = data.get("tags", []) or []
+    return tags
 
 
 def latest_tag(tags: Iterable[str], pattern: str) -> Optional[str]:
@@ -309,6 +341,16 @@ def discover_docker_updates() -> List[UpdateItem]:
         except (error.HTTPError, error.URLError):
             latest = None
         if latest:
+            # For llama.cpp, we check if the digest has changed to avoid reporting floating tag "updates"
+            current_digest = get_ghcr_digest("ggml-org/llama.cpp", current_llama_image.group(1))
+            latest_digest = get_ghcr_digest("ggml-org/llama.cpp", latest)
+
+            is_actually_newer = False
+            if current_digest and latest_digest:
+                is_actually_newer = current_digest != latest_digest
+            elif not current_digest: # fallback to version check if we can't get current digest
+                is_actually_newer = is_newer(latest, current_llama_image.group(1))
+
             items.append(
                 UpdateItem(
                     kind="docker",
@@ -316,8 +358,8 @@ def discover_docker_updates() -> List[UpdateItem]:
                     source_file=DOCKER_COMPOSE_LLAMA_NATIVE,
                     current=current_llama_image.group(1),
                     latest=latest,
-                    applyable=is_newer(latest, current_llama_image.group(1)),
-                    reason="GHCR full-cuda-b tag (current; use full-cuda13 for floating CUDA 13)",
+                    applyable=is_actually_newer,
+                    reason="GHCR full-cuda-b tag (digest check)",
                 )
             )
 
@@ -416,18 +458,6 @@ def discover_requirements_updates() -> List[UpdateItem]:
                     latest=latest,
                     applyable=applyable,
                     reason="PyPI",
-                )
-            )
-        elif op == "":
-            items.append(
-                UpdateItem(
-                    kind="python",
-                    name=pkg,
-                    source_file=REQ_DEV,
-                    current="(unpinned)",
-                    latest=latest,
-                    applyable=False,
-                    reason="Unpinned in requirements-dev.txt",
                 )
             )
         elif op == "complex":
@@ -635,7 +665,8 @@ def apply_replacements(
 def discover_all_updates() -> List[UpdateItem]:
     docker_items = discover_docker_updates()
     req_items = discover_requirements_updates()
-    return docker_items + req_items
+    all_items = docker_items + req_items
+    return [i for i in all_items if i.current != i.latest]
 
 
 def print_update_report(items: Sequence[UpdateItem]) -> None:
@@ -646,9 +677,10 @@ def print_update_report(items: Sequence[UpdateItem]) -> None:
     print("Discovered update targets:")
     for item in items:
         marker = "UPDATE" if item.applyable else "INFO"
+        date_str = f" [{item.date}]" if item.date else ""
         print(
             f"- [{marker}] {item.kind:<6} {item.name:<40} "
-            f"{item.current} -> {item.latest} ({item.reason})"
+            f"{item.current} -> {item.latest}{date_str} ({item.reason})"
         )
 
 

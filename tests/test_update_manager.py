@@ -71,8 +71,8 @@ class UpdateManagerTests(unittest.TestCase):
 
 def test_discover_docker_updates_with_mocked_docker_hub(mocker):
     """Test discover_docker_updates with mocked Docker Hub API responses."""
-    # Use a version newer than the current one in compose file (0.30.8)
-    mock_tags = ["0.30.9", "0.31.0", "0.32.0"]
+    # Use a version newer than the current one in compose file (0.32.1)
+    mock_tags = ["0.32.2", "0.33.0", "0.34.0"]
 
     # Mock all the network calls in discover_docker_updates
     mocker.patch.object(update_manager, "docker_hub_tags", return_value=mock_tags)
@@ -94,11 +94,11 @@ def test_discover_requirements_updates_with_mocked_pypi(mock_fetch_json):
     }
 
     items = update_manager.discover_requirements_updates()
-    openai_items = [i for i in items if i.name == "openai"]
+    jupyter_items = [i for i in items if i.name == "jupyter"]
 
-    assert len(openai_items) >= 1
-    assert openai_items[0].kind == "python"
-    assert openai_items[0].latest == "2.0.0"
+    assert len(jupyter_items) >= 1
+    assert jupyter_items[0].kind == "python"
+    assert jupyter_items[0].latest == "2.0.0"
 
 
 def test_version_key_with_various_formats():

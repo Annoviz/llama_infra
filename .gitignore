@@ -176,3 +176,4 @@ workspace/data
 .jupyter
 output/
 benchmarks/
+.update-manager-proposal.json
