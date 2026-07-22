@@ -312,12 +312,12 @@ nvidia-smi --query-gpu=memory.used,memory.total --format=csv,noheader
 
 | Variable | Default | Purpose |
 |----------|---------|---------|
-| `LLAMA_CPP_IMAGE` | `ghcr.io/ggml-org/llama.cpp:full-cuda-b4738` | Base image for all llama.cpp services |
+- `LLAMA_CPP_IMAGE` | `ghcr.io/ggml-org/llama.cpp:full-cuda13` | Base image for all llama.cpp services |
 | `LLAMA_ROUTER_PORT` | `8080` | Internal container port (not exposed to host directly) |
 | `LLAMA_ROUTER_MODELS_MAX` | `2` | Max concurrent models in VRAM |
 | `LLAMA_ROUTER_PRESET` | `/app/router-preset.ini` | Preset INI file path inside container |
 | `VLLM_GATEWAY_PORT` | `11434` | Host port for gateway (Ollama API) — reused from vLLM stack |
-| `LITELLM_VERSION` | `1.92.0` | LiteLLM Docker tag — shared with vLLM stack |
+| `LITELLM_VERSION` | `1.93.0` | LiteLLM Docker tag — shared with vLLM stack |
 
 ## Files
 
