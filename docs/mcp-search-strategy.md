@@ -9,7 +9,7 @@ When routing Claude Code through local servers (e.g., `llama-server`), the built
 
 | Approach | Implementation / Image | Pros | Cons | Verdict |
 | :--- | :--- | :--- | :--- | :--- |
-| **Multi-Engine** | `ghcr.io/aas-ee/open-web-search` | Redundancy (Google, Bing, DDG) | Higher latency; potential for "hanging" on one engine | Current - Unstable |
+| **Multi-Engine** | `ghcr.io/aas-ee/open-web-search` | Redundancy (Google, Bing, DDG) | Higher latency; potential for "hanging" on one engine | Verified |
 | **Dedicated DDG** | `mcp/duckduckgo` or `nickclyde/duckduckgo-mcp-server` | Lightweight, no API keys required, optimized for DDG | stdio-only; cannot be deployed as standalone HTTP container | Incompatible (Standalone) |
 | **API-Based** | Brave Search / Google Custom Search | Extremely reliable; official APIs | Requires API keys; potential costs | Fallback Option |
 
@@ -111,6 +111,6 @@ Instead of mapping host ports for every service, we deploy a single **MCP Gatewa
 **Fix**: Use the Python-based Dockerfile provided in the "Dedicated DuckDuckGo Search" section.
 
 ## Success Criteria
-- [ ] Successful web search return in < 5 seconds.
+- [x] Successful web search return in < 5 seconds.
 - [ ] Zero port conflicts between multiple MCP services.
 - [ ] Unified configuration management for all AI tools via Gateway.
