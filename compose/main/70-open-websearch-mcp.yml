@@ -1,0 +1,15 @@
+services:
+  open-websearch-mcp:
+    image: ghcr.io/aas-ee/open-web-search:latest
+    container_name: open-websearch-mcp
+    restart: unless-stopped
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      - DEFAULT_SEARCH_ENGINE=duckduckgo
+      - ENABLE_CORS=true
+      - CORS_ORIGIN=*
+    ports:
+      - "${OPEN_WEBSEARCH_PORT:-5050}:3000"
+    networks:
+      - ollama-bridge

@@ -1,0 +1,11 @@
+services:
+  duckduckgo-mcp:
+    build:
+      context: ./compose/main
+      dockerfile: 80-duckduckgo-mcp/Dockerfile
+    container_name: duckduckgo-mcp
+    restart: unless-stopped
+    ports:
+      - "${DDG_MCP_PORT:-5051}:3000"
+    networks:
+      - ollama-bridge

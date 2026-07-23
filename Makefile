@@ -31,7 +31,8 @@ COMPOSE_MAIN := docker compose --project-directory $(CURDIR) \
 	-f compose/main/30-open-webui.yml \
 	-f compose/main/40-falkordb.yml \
 	-f compose/main/50-falkordb-mcp.yml \
-	-f compose/main/60-unsloth.yml
+	-f compose/main/60-unsloth.yml \
+	-f compose/main/70-open-websearch-mcp.yml
 COMPOSE_LLAMA := docker compose --project-directory $(CURDIR) \
 	-f compose/llama/00-networks-and-volumes.yml \
 	-f compose/llama/10-llamacpp-native.yml \
@@ -60,15 +61,15 @@ LLAMA_CPP_IMAGE ?= ghcr.io/ggml-org/llama.cpp:full-cuda-b4738
 	updates-check updates-suggest updates-apply \
 	check-agent-docs verify-agent-routing check-doc-links \
 	precommit-install precommit-run precommit-update \
-	up-ollama up-anythingllm up-open-webui up-main up-falkordb up-falkordb-mcp up-gotenberg up-unsloth up-main-all \
+	up-ollama up-anythingllm up-open-webui up-main up-falkordb up-falkordb-mcp up-gotenberg up-unsloth up-main-all up-open-websearch-mcp \
 	up-llamacpp up-llamacpp-py up-llama up-llamacpp-router \
 	up-vllm up-vllm-planner up-vllm-coder up-vllm-fastcoder download-vllm-models \
-	down-main down-gotenberg down-falkor down-falkordb down-falkordb-mcp down-unsloth down-llama down-vllm down-llamacpp-router down-all \
-	restart-ollama restart-anythingllm restart-open-webui restart-falkordb restart-falkordb-mcp restart-gotenberg restart-unsloth restart-llamacpp restart-llamacpp-py \
+	down-main down-gotenberg down-falkor down-falkordb down-falkordb-mcp down-unsloth down-llama down-vllm down-llamacpp-router down-all down-open-websearch-mcp \
+	restart-ollama restart-anythingllm restart-open-webui restart-falkordb restart-falkordb-mcp restart-gotenberg restart-unsloth restart-llamacpp restart-llamacpp-py restart-open-websearch-mcp \
 	restart-vllm-planner restart-vllm-coder restart-vllm-fastcoder restart-llamacpp-router \
-	logs-ollama logs-anythingllm logs-open-webui logs-falkordb logs-falkordb-mcp logs-unsloth logs-llamacpp logs-llamacpp-py logs-all \
+	logs-ollama logs-anythingllm logs-open-webui logs-falkordb logs-falkordb-mcp logs-unsloth logs-llamacpp logs-llamacpp-py logs-all logs-open-websearch-mcp \
 	logs-vllm-planner logs-vllm-coder logs-vllm-fastcoder logs-vllm-gateway \
-	ps-main ps-falkor ps-falkordb ps-falkordb-mcp ps-unsloth ps-llama ps-vllm ps-all \
+	ps-main ps-falkor ps-falkordb ps-falkordb-mcp ps-unsloth ps-llama ps-vllm ps-all ps-open-websearch-mcp \
 	gpu-host gpu-smoke-llamacpp smoke-vllm perf-test vision-test bench-vision model-rebuild clean prune
 
 help:
@@ -89,6 +90,7 @@ help-verbose:
 	@printf "  make up-gotenberg        # Start Gotenberg + MCP server for doc-to-PDF conversion\n"
 	@printf "  make up-unsloth          # Start Unsloth container (GPU + Jupyter/API)\n"
 	@printf "  make up-main-all         # Start core stack + FalkorDB + FalkorDB MCP\n"
+	@printf "  make up-open-websearch-mcp # Start Open Web Search MCP server\n"
 	@printf "  make down-main           # Stop the main stack\n"
 	@printf "  make down-gotenberg      # Stop Gotenberg + MCP server\n"
 	@printf "  make down-falkordb       # Stop FalkorDB only\n"
@@ -558,3 +560,37 @@ prune:
 	@printf "Pruning Docker system...\n"
 	docker system prune -f
 	docker volume prune -f
+
+up-open-websearch-mcp:
+	$(COMPOSE_MAIN) up -d open-websearch-mcp
+
+down-open-websearch-mcp:
+	$(COMPOSE_MAIN) stop open-websearch-mcp
+
+restart-open-websearch-mcp:
+	$(COMPOSE_MAIN) restart open-websearch-mcp
+
+logs-open-websearch-mcp:
+	$(COMPOSE_MAIN) logs -f --tail=200 open-websearch-mcp
+
+ps-open-websearch-mcp:
+	$(COMPOSE_MAIN) ps open-websearch-mcp
+
+test-open-websearch:
+	@printf "Testing open-websearch-mcp connectivity...\n"
+	@curl -s http://localhost:5050/mcp | grep -q "session ID" && echo "Connectivity OK (received session error as expected)" || (echo "Connectivity FAILED"; exit 1)
+
+up-duckduckgo-mcp:
+	$(COMPOSE_MAIN) up -d duckduckgo-mcp
+
+down-duckduckgo-mcp:
+	$(COMPOSE_MAIN) stop duckduckgo-mcp
+
+restart-duckduckgo-mcp:
+	$(COMPOSE_MAIN) restart duckduckgo-mcp
+
+logs-duckduckgo-mcp:
+	$(COMPOSE_MAIN) logs -f --tail=200 duckduckgo-mcp
+
+ps-duckduckgo-mcp:
+	$(COMPOSE_MAIN) ps duckduckgo-mcp
