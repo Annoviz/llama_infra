@@ -178,6 +178,16 @@ The Gateway supports MCP servers from:
 - Custom local files
 - Remote servers with OAuth authentication
 
+### Official Docker MCP Registry
+
+The official Docker MCP Gateway image is hosted on Docker Hub:
+
+| Image | Registry | Version | Description |
+|-------|----------|---------|-------------|
+| `docker/mcp-gateway` | `registry-1.docker.io/docker/mcp-gateway` | `v0.43.3` (current) | Official Docker MCP Gateway from Docker Inc. |
+
+The official image is available at: https://hub.docker.com/r/docker/mcp-gateway
+
 ### Project MCP Services
 
 Your project includes these MCP services that can be orchestrated through the Gateway:
