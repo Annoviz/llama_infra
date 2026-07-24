@@ -195,8 +195,25 @@ The MCP Gateway supports multiple registry sources via the `--registry` flag:
 | Registry | URL | Description |
 |----------|-----|-------------|
 | **Docker MCP Catalog** | `docker-mcp.yaml` (built-in) | Official Docker catalog with GitHub, Git, Filesystem servers |
-| **Anthropic MCP Registry** | `https://registry.modelcontextprotocol.io` | Community-owned registry backed by Anthropic, GitHub, Microsoft |
+| **Official MCP Registry** | `https://registry.modelcontextprotocol.io` | Community-owned registry backed by Anthropic, GitHub, Microsoft, PulseMCP |
 | **agentic-community MCP Gateway & Registry** | Custom config | Enterprise control plane supporting local + imported servers |
+
+### Official MCP Registry Servers
+
+The official MCP Registry at `registry.modelcontextprotocol.io` hosts 500+ community servers. Key servers include:
+
+| Server | Namespace | Description |
+|--------|-----------|-------------|
+| `github` | `github.com/marketplace/actions/github-code` | GitHub repository access, code search |
+| `git` | `anthropics/mcp-git` | Local git operations |
+| `filesystem` | `anthropics/mcp-filesystem` | Read/write local files |
+| `postgres` | `modelcontextprotocol/servers` | PostgreSQL database queries |
+| `sqlite` | `modelcontextprotocol/servers` | SQLite database queries |
+| `slack` | `modelcontextprotocol/servers` | Slack integration |
+| `notion` | `modelcontextprotocol/servers` | Notion workspace access |
+| `jira` | `modelcontextprotocol/servers` | Jira issue management |
+
+See https://registry.modelcontextprotocol.io/ for the full server catalog.
 
 ### Using External Registries
 
@@ -217,9 +234,12 @@ registry:
   filesystem:
     ref: "anthropics/mcp-filesystem"
   
-  # Imported from Anthropic registry
-  anthropic-mcp-server:
-    ref: "https://registry.modelcontextprotocol.io/v0.1/servers/anthropic-mcp-server"
+  # Imported from official MCP registry
+  github:
+    ref: "https://registry.modelcontextprotocol.io/v0.1/servers/github.com/marketplace/actions/github-code"
+  
+  git:
+    ref: "https://registry.modelcontextprotocol.io/v0.1/servers/anthropics/mcp-git"
 ```
 
 See https://agentic-community.github.io/mcp-gateway-registry/ for full documentation on importing external registries.
