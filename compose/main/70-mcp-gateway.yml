@@ -1,0 +1,25 @@
+services:
+  mcp-gateway:
+    image: docker/mcp-gateway:${MCP_GATEWAY_VERSION:-v0.43.3}
+    container_name: mcp-gateway
+    restart: unless-stopped
+    ports:
+      - "${MCP_GATEWAY_PORT:-8811}:8811"
+    environment:
+      - MCP_TRANSPORT=${MCP_TRANSPORT:-sse}
+      - MCP_PORT=8811
+      - MCP_API_KEY=${MCP_API_KEY:-}
+      - MCP_GATEWAY_AUTH_TOKEN=${MCP_GATEWAY_AUTH_TOKEN:-}
+      - DOCKER_MCP_ALLOW_INSECURE_REMOTE_URLS=${DOCKER_MCP_ALLOW_INSECURE_REMOTE_URLS:-0}
+    volumes:
+      - ./workspace/mcp/secrets.env:/etc/mcp-secrets.env:ro
+      - ./workspace/mcp/registry.yaml:/etc/registry.yaml:ro  # MCP server registry config
+    networks:
+      - mcp-gateway-network
+    depends_on:
+      # Add dependent services here if needed
+      condition: service_healthy
+
+networks:
+  mcp-gateway-network:
+    driver: bridge

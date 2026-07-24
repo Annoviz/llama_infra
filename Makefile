@@ -32,11 +32,9 @@ COMPOSE_MAIN := docker compose --project-directory $(CURDIR) \
 	-f compose/main/40-falkordb.yml \
 	-f compose/main/50-falkordb-mcp.yml \
 	-f compose/main/60-unsloth.yml \
-	-f compose/main/70-open-websearch-mcp.yml
-COMPOSE_LLAMA := docker compose --project-directory $(CURDIR) \
-	-f compose/llama/00-networks-and-volumes.yml \
-	-f compose/llama/10-llamacpp-native.yml \
-	-f compose/llama/20-llamacpp-py.yml
+	-f compose/main/70-open-websearch-mcp.yml \
+	-f compose/main/80-duckduckgo-mcp.yml \
+	-f compose/main/70-mcp-gateway.yml
 COMPOSE_LLAMA_ROUTER := docker compose --project-directory $(CURDIR) \
 	-f compose/llama/05-llamacpp-router-networks.yml \
 	-f compose/llama/15-llamacpp-router.yml \
@@ -61,7 +59,7 @@ LLAMA_CPP_IMAGE ?= ghcr.io/ggml-org/llama.cpp:full-cuda-b4738
 	updates-check updates-suggest updates-apply \
 	check-agent-docs verify-agent-routing check-doc-links \
 	precommit-install precommit-run precommit-update \
-	up-ollama up-anythingllm up-open-webui up-main up-falkordb up-falkordb-mcp up-gotenberg up-unsloth up-main-all up-open-websearch-mcp \
+	up-ollama up-anythingllm up-open-webui up-main up-falkordb up-falkordb-mcp up-gotenberg up-unsloth up-main-all up-open-websearch-mcp up-mcp-gateway \\
 	up-llamacpp up-llamacpp-py up-llama up-llamacpp-router \
 	up-vllm up-vllm-planner up-vllm-coder up-vllm-fastcoder download-vllm-models \
 	down-main down-gotenberg down-falkor down-falkordb down-falkordb-mcp down-unsloth down-llama down-vllm down-llamacpp-router down-all down-open-websearch-mcp \
@@ -90,7 +88,7 @@ help-verbose:
 	@printf "  make up-gotenberg        # Start Gotenberg + MCP server for doc-to-PDF conversion\n"
 	@printf "  make up-unsloth          # Start Unsloth container (GPU + Jupyter/API)\n"
 	@printf "  make up-main-all         # Start core stack + FalkorDB + FalkorDB MCP\n"
-	@printf "  make up-open-websearch-mcp # Start Open Web Search MCP server\n"
+	@printf "  make up-mcp-gateway       # Start MCP Gateway service\n"
 	@printf "  make down-main           # Stop the main stack\n"
 	@printf "  make down-gotenberg      # Stop Gotenberg + MCP server\n"
 	@printf "  make down-falkordb       # Stop FalkorDB only\n"
@@ -579,6 +577,21 @@ ps-open-websearch-mcp:
 test-open-websearch:
 	@printf "Testing open-websearch-mcp connectivity...\n"
 	@curl -s http://localhost:5050/mcp | grep -q "session ID" && echo "Connectivity OK (received session error as expected)" || (echo "Connectivity FAILED"; exit 1)
+
+up-mcp-gateway:
+	$(COMPOSE_MAIN) up -d mcp-gateway
+
+down-mcp-gateway:
+	$(COMPOSE_MAIN) stop mcp-gateway
+
+restart-mcp-gateway:
+	$(COMPOSE_MAIN) restart mcp-gateway
+
+logs-mcp-gateway:
+	$(COMPOSE_MAIN) logs -f --tail=200 mcp-gateway
+
+ps-mcp-gateway:
+	$(COMPOSE_MAIN) ps mcp-gateway
 
 up-duckduckgo-mcp:
 	$(COMPOSE_MAIN) up -d duckduckgo-mcp

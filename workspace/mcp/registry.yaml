@@ -1,0 +1,16 @@
+# MCP Gateway Registry Configuration
+# Defines which MCP servers to enable in the gateway
+# Format: registry: {server_name: {ref: ""}}
+
+registry:
+  # DuckDuckGo Search - free web search without tracking
+  duckduckgo:
+    ref: ""
+
+  # Brave Search - web, image, video, news search (requires API key in secrets.env)
+  brave:
+    ref: ""
+
+  # Filesystem - read/write local files
+  filesystem:
+    ref: ""
