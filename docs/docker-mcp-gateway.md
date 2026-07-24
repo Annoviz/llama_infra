@@ -188,6 +188,42 @@ The official Docker MCP Gateway image is hosted on Docker Hub:
 
 The official image is available at: https://hub.docker.com/r/docker/mcp-gateway
 
+### Compatible MCP Registries
+
+The MCP Gateway supports multiple registry sources via the `--registry` flag:
+
+| Registry | URL | Description |
+|----------|-----|-------------|
+| **Docker MCP Catalog** | `docker-mcp.yaml` (built-in) | Official Docker catalog with GitHub, Git, Filesystem servers |
+| **Anthropic MCP Registry** | `https://registry.modelcontextprotocol.io` | Community-owned registry backed by Anthropic, GitHub, Microsoft |
+| **agentic-community MCP Gateway & Registry** | Custom config | Enterprise control plane supporting local + imported servers |
+
+### Using External Registries
+
+To use an external registry with the Gateway:
+
+```yaml
+services:
+  mcp-gateway:
+    command: ["gateway run", "--transport", "sse", "--port", "8811", "--registry", "/etc/registry.yaml"]
+    volumes:
+      - ./workspace/mcp/registry.yaml:/etc/registry.yaml:ro
+```
+
+The `registry.yaml` format supports importing servers from external registries:
+```yaml
+registry:
+  # Local servers
+  filesystem:
+    ref: "anthropics/mcp-filesystem"
+  
+  # Imported from Anthropic registry
+  anthropic-mcp-server:
+    ref: "https://registry.modelcontextprotocol.io/v0.1/servers/anthropic-mcp-server"
+```
+
+See https://agentic-community.github.io/mcp-gateway-registry/ for full documentation on importing external registries.
+
 ### Project MCP Services
 
 Your project includes these MCP services that can be orchestrated through the Gateway:
