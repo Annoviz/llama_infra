@@ -1,4 +1,22 @@
 # Docker Image Update Changelog - March 26, 2026
+## Docker Image Updates - July 23, 2026
+
+**Note:** Each update was manually approved by the user via interactive prompt.
+
+
+### Updated Docker Images
+
+- **ollama/ollama**: `0.32.1` → `0.32.3`
+
+### Updated Python Packages
+
+- **notebook**: `7.6.0` → `7.6.1`
+- **aiohttp**: `3.14.2` → `3.14.3`
+- **hypothesis**: `6.158.0` → `6.161.0`
+- **pre-commit**: `4.6.0` → `4.6.1`
+
+---
+
 ## Docker Image Updates - July 21, 2026
 
 **Note:** Each update was manually approved by the user via interactive prompt.
