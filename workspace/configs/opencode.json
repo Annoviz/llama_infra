@@ -1,0 +1,51 @@
+{
+    "$schema": "https://opencode.ai/config.json",
+    "provider": {
+        "my-llama-server": {
+            "name": "llama.cpp",
+            "npm": "@ai-sdk/openai-compatible",
+            "options": {
+                "baseURL": "http://localhost:8080/v1",
+                "apiKey": "llama"
+            },
+            "models": {
+                "gemma-4-31B": {
+                    "name": "gemma-4-31B",
+                    "modalities": {
+                        "text": {},
+                        "image": {}
+                    }
+                },
+                "qwen3.6-35B": {
+                    "name": "qwen3.6-35B",
+                    "modalities": {
+                        "text": {},
+                        "image": {}
+                    }
+                },
+                "qwen3.6-27B": {
+                    "name": "qwen3.6-27B",
+                    "modalities": {
+                        "text": {},
+                        "image": {}
+                    }
+                },
+                "qwen3.5-4B": {
+                    "name": "qwen3.5-4B",
+                    "modalities": {
+                        "text": {},
+                        "image": {}
+                    }
+                }
+            }
+        }
+    },
+    "model": "my-llama-server/qwen3.6-27B",
+    "compaction": {
+        "auto": true,
+        "buffer": 19200,
+        "keep": {
+            "tokens": 16000
+        }
+    }
+}
