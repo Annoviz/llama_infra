@@ -304,6 +304,15 @@ def latest_pypi_version(package_name: str) -> Optional[str]:
     return str(version) if version else None
 
 
+def github_release_version(owner: str, repo: str) -> Optional[str]:
+    """Get latest release tag from GitHub API (fallback for repos that don't publish versioned tags to GHCR)."""
+    try:
+        data = fetch_json(f"https://api.github.com/repos/{owner}/{repo}/releases/latest")
+        return data.get("tag_name")
+    except Exception:
+        return None
+
+
 def parse_requirements_line(
     line: str,
 ) -> Tuple[Optional[str], Optional[str], Optional[str]]:
@@ -349,9 +358,12 @@ def discover_docker_updates() -> List[UpdateItem]:
             elif "pypi" in reason.lower():
                 latest = latest_pypi_version(pkg_name)
             elif pkg_name == "open-webui/open-webui":
-                # GHCR namespace/repo is the full path for open-webui
+                # GHCR namespace/repo is the full path for open-webui.
+                # GHCR only has git-SHA tags; fall back to GitHub releases API for versioned tags.
                 all_tags = ghcr_tags("open-webui/open-webui")
                 latest = latest_tag(all_tags, pattern)
+                if not latest:
+                    latest = github_release_version("open-webui", "open-webui")
             else:
                 latest = latest_tag(docker_hub_tags(pkg_name), pattern)
         except (error.HTTPError, error.URLError):
