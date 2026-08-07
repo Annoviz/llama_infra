@@ -27,7 +27,7 @@ docker run -d \
   --name open-websearch-mcp \
   --restart unless-stopped \
   -p 127.0.0.1:5050:3000 \
-  ghcr.io/aas-ee/open-web-search:latest
+   ghcr.io/aas-ee/open-web-search:v2.1.11
 ```
 
 **Claude Code Configuration:**

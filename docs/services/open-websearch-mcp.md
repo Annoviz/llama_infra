@@ -5,7 +5,7 @@ Multi-engine web search MCP server that allows Claude to perform internet querie
 ## Compose
 - File: `compose/main/70-open-websearch-mcp.yml`
 - Service name: `open-websearch-mcp`
-- Image: `ghcr.io/aas-ee/open-web-search:latest`
+- Image: `ghcr.io/aas-ee/open-web-search:v2.1.11`
 
 ## Ports
 - `${OPEN_WEBSEARCH_PORT:-5050}:3000` (MCP HTTP/SSE endpoint)

@@ -1,6 +1,6 @@
 services:
   open-webui:
-    image: ghcr.io/open-webui/open-webui:${OW_VERSION:-v0.8.11}
+    image: ghcr.io/open-webui/open-webui:${OW_VERSION}
     container_name: open-webui
     ports:
       - "3002:8080"

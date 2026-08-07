@@ -1,6 +1,6 @@
 services:
   anythingllm:
-    image: mintplexlabs/anythingllm:${ANYTHINGLLM_VERSION:-1.15.0}
+    image: mintplexlabs/anythingllm:${ANYTHINGLLM_VERSION}
     container_name: anythingllm
     ports:
       - "3001:3001"

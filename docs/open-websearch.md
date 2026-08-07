@@ -20,7 +20,7 @@ version: "3.8"
 
 services:
   web-search:
-    image: ghcr.io/aas-ee/open-web-search:latest
+    image: ghcr.io/aas-ee/open-web-search:v2.1.11
     container_name: web-search
     working_dir: /app
     restart: unless-stopped

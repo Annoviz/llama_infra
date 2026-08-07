@@ -1,6 +1,6 @@
 services:
   mcp-gateway:
-    image: docker/mcp-gateway:${MCP_GATEWAY_VERSION:-v0.43.3}
+    image: docker/mcp-gateway:${MCP_GATEWAY_VERSION}
     container_name: mcp-gateway
     restart: unless-stopped
     ports:

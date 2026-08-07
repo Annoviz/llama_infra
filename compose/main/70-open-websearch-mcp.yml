@@ -1,6 +1,6 @@
 services:
   open-websearch-mcp:
-    image: ghcr.io/aas-ee/open-web-search:latest
+    image: ghcr.io/aas-ee/open-web-search:v2.1.11
     container_name: open-websearch-mcp
     restart: unless-stopped
     environment:

@@ -1,4 +1,26 @@
 # Docker Image Update Changelog - March 26, 2026
+## Docker Image Updates - August 07, 2026
+
+**Note:** Each update was manually approved by the user via interactive prompt.
+
+
+### Updated Docker Images
+
+- **ollama/ollama**: `0.32.3` → `0.32.6`
+- **vllm/vllm-openai (CUDA)**: `v0.25.1-cu129-ubuntu2404` → `v0.26.0-cu129-ubuntu2404`
+- **ghcr.io/berriai/litellm**: `1.93.0` → `1.95.0`
+
+### Updated Python Packages
+
+- **uvicorn**: `0.51.0` → `0.52.1`
+- **fastapi**: `0.139.2` → `0.141.1`
+- **pydantic-settings**: `2.14.2` → `2.15.0`
+- **sse-starlette**: `3.4.6` → `3.4.8`
+- **hypothesis**: `6.161.0` → `6.165.2`
+- **ruff**: `0.15.22` → `0.16.1`
+
+---
+
 ## Docker Image Updates - July 23, 2026
 
 **Note:** Each update was manually approved by the user via interactive prompt.

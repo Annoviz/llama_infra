@@ -251,7 +251,7 @@ Your project includes these MCP services that can be orchestrated through the Ga
 | Service | Compose File | Image | Port | Purpose |
 |---------|--------------|-------|------|---------|
 | **MCP Gateway** | `compose/main/70-mcp-gateway.yml` | `docker/mcp-gateway:v0.43.3` | 8811 | Central proxy for all MCP servers |
-| **Open WebSearch** | `compose/main/80-duckduckgo-mcp.yml` | `ghcr.io/aas-ee/open-web-search:latest` | 5050 | DuckDuckGo web search (no API key) |
+| **Open WebSearch** | `compose/main/80-duckduckgo-mcp.yml` | `ghcr.io/aas-ee/open-web-search:v2.1.11` | 5050 | DuckDuckGo web search (no API key) |
 | **Brave Search MCP** | `compose/main/70-open-websearch-mcp.yml` | Custom build | 5051 | Brave Search integration |
 | **Gotenberg MCP** | `compose/gotenberg/20-gotenberg-mcp.yml` | Python + Gotenberg | 3015 | PDF generation for web search results |
 

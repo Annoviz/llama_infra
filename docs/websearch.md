@@ -15,7 +15,7 @@ Step 1: Run Open-WebSearch with Docker
 Execute the following command in your terminal to start the background container on port `3000`:
 
 ```bash
-docker run -d -p 3000:3000 ghcr.io/aas-ee/open-web-search:latest
+docker run -d -p 3000:3000 ghcr.io/aas-ee/open-web-search:v2.1.11
 ```
 
 Use code with caution.
@@ -164,7 +164,7 @@ If you are only running one instance of Open-WebSearch, explicitly bind it to a 
       --name open-websearch-mcp \
       --restart unless-stopped \
       -p 127.0.0.1:5050:3000 \
-      ghcr.io/aas-ee/open-web-search:latest
+      ghcr.io/aas-ee/open-web-search:v2.1.11
     ```
 
     Use code with caution.
@@ -216,7 +216,7 @@ If you plan to run multiple MCP containers on standard Docker Engine, you can im
     cat > ~/.docker/mcp/registry.yaml << 'EOF'
     registry:
       open-websearch:
-        image: ghcr.io/aas-ee/open-web-search:latest
+        image: ghcr.io/aas-ee/open-web-search:v2.1.11
     EOF
     ```
 
@@ -275,7 +275,7 @@ docker run -d \
   --name open-websearch-mcp \
   --restart unless-stopped \
   -p 127.0.0.1:5050:3000 \
-  ghcr.io/aas-ee/open-web-search:latest
+  ghcr.io/aas-ee/open-web-search:v2.1.11
 ```
 
 Use code with caution.
@@ -462,7 +462,7 @@ docker run -d \
   --restart unless-stopped \
   -e DEFAULT_SEARCH_ENGINE=duckduckgo \
   -p 127.0.0.1:5050:3000 \
-  ghcr.io/aas-ee/open-web-search:latest
+  ghcr.io/aas-ee/open-web-search:v2.1.11
 ```
 
 Use code with caution.
@@ -501,7 +501,7 @@ docker run -d \
   --restart unless-stopped \
   -e SEARCH_MODE=playwright \
   -p 127.0.0.1:5050:3000 \
-  ghcr.io/aas-ee/open-web-search:latest
+  ghcr.io/aas-ee/open-web-search:v2.1.11
 ```
 
 Use code with caution.

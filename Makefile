@@ -1,8 +1,9 @@
 SHELL := /bin/bash
 .DEFAULT_GOAL := help
 
-# load .env file if it exists
+# load .env and VERSIONS.env files (order: .env overrides VERSIONS.env)
 -include .env
+-include VERSIONS.env
 export
 
 COMPOSE_CORE := docker compose --project-directory $(CURDIR) \
