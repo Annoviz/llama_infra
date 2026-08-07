@@ -4,7 +4,7 @@ WORKDIR /app
 COPY server.py .
 
 # FastMCP with streamable-http transport + async HTTP client for Gotenberg API
-RUN pip install --no-cache-dir mcp httpx
+RUN pip install --no-cache-dir "mcp>=1.0,<2.0" httpx
 
 EXPOSE 8000
 

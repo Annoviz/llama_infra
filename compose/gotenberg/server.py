@@ -13,6 +13,7 @@ Usage:
 """
 
 import os
+import re
 from pathlib import Path
 from typing import Optional
 
@@ -46,11 +47,259 @@ def _post_form(
     files: Optional[dict] = None,
     data: Optional[dict] = None,
 ) -> httpx.Response:
-    """POST multipart/form-data to Gotenberg and raise on HTTP errors."""
-    resp = httpx.post(f"{GOTENBERG_URL}{endpoint}", files=files, data=data, timeout=TIMEOUT)
+    """POST multipart/form-data to Gotenberg and raise on HTTP errors.
+
+    Always uses multipart/form-data even when there are no file uploads,
+    because Gotenberg rejects application/x-www-form-urlencoded with 415.
+    When files is empty/None, adds a dummy entry to force multipart encoding.
+    """
+    import io
+    
+    if not files:
+        # Gotenberg requires multipart/form-data; httpx uses form-urlencoded
+        # when only data= is provided. Add a no-op file field to force multipart.
+        files = {"_gotenberg_dummy": ("_", io.BytesIO(b""), "application/octet-stream")}
+    
+    resp = httpx.post(f"{GOTENBERG_URL}{endpoint}", files=files, data=data or {}, timeout=TIMEOUT)
     if resp.status_code != 200:
         resp.raise_for_status()
     return resp
+
+
+def _post_html(endpoint: str, html_content: str, extra_data: Optional[dict] = None) -> httpx.Response:
+    """POST HTML content to Gotenberg as a file upload.
+
+    Gotenberg's /forms/chromium/convert/html expects the HTML content as a file
+    (index.html or an 'html' field), not as a form data field.
+    """
+    import io
+    
+    files = {
+        "html": ("index.html", io.BytesIO(html_content.encode()), "text/html"),
+    }
+    
+    resp_data = extra_data or {}
+    resp = httpx.post(f"{GOTENBERG_URL}{endpoint}", files=files, data=resp_data, timeout=TIMEOUT)
+    if resp.status_code != 200:
+        resp.raise_for_status()
+    return resp
+
+
+def _markdown_to_html(md_content: str, title: Optional[str]) -> str:
+    """Convert markdown content to a styled HTML document for Chromium rendering.
+
+    Gotenberg's /forms/chromium/convert/markdown requires an index.html file with
+    actual content — sending an empty HTML results in blank PDFs. This function
+    converts common markdown syntax (headers, tables, bold, code blocks, etc.) into
+    properly styled HTML that Chromium can render as a PDF.
+    """
+    import html as html_module
+
+    css = """\
+<style>
+@page { margin: 2cm; }
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+       line-height: 1.6; color: #1a1a1a; max-width: none; }
+h1 { font-size: 2em; border-bottom: 2px solid #eaecef; padding-bottom: 0.3em; margin-top: 0; }
+h2 { font-size: 1.5em; border-bottom: 1px solid #eaecef; padding-bottom: 0.3em; margin-top: 1.5em; }
+h3 { font-size: 1.25em; margin-top: 1.2em; color: #24292f; }
+h4, h5, h6 { margin-top: 1em; color: #24292f; }
+hr { border: none; border-top: 1px solid #eaecef; margin: 1.5em 0; }
+table { border-collapse: collapse; width: 100%; margin: 1em 0; }
+th, td { border: 1px solid #dfe2e5; padding: 8px 12px; text-align: left; }
+th { background-color: #f6f8fa; font-weight: 600; }
+tr:nth-child(even) { background-color: #fafbfc; }
+strong, b { font-weight: 600; color: #1a1a1a; }
+em, i { font-style: italic; }
+p { margin: 0.5em 0; }
+code { background-color: #f6f8fa; padding: 2px 6px; border-radius: 3px;
+       font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+       font-size: 0.9em; }
+pre { background-color: #f6f8fa; padding: 16px; border-radius: 6px; overflow-x: auto;
+      margin: 1em 0; line-height: 1.45; }
+pre code { background: none; padding: 0; font-size: 0.85em; }
+blockquote { border-left: 4px solid #dfe2e5; margin: 1em 0; padding: 0.5em 1em;
+             color: #6a737d; background-color: #fafbfc; }
+ul, ol { padding-left: 2em; }
+li { margin: 0.25em 0; }
+a { color: #0366d6; text-decoration: none; }
+a:hover { text-decoration: underline; }
+</style>"""
+
+    title_tag = f"<title>{html_module.escape(title)}</title>" if title else ""
+
+    lines = md_content.split("\n")
+    html_lines = []
+    in_code_block = False
+    code_buf = []
+    in_table = False
+    table_rows = []
+
+    def _is_table_row(line: str) -> bool:
+        """Check if a line looks like a markdown table row (has | delimiters)."""
+        return "|" in line and line.count("|") >= 2
+
+    def flush_table():
+        if not table_rows:
+            return
+        rows_html = []
+        for i, row_text in enumerate(table_rows):
+            cells = [html_module.escape(c.strip()) for c in row_text.split("|")[1:-1]]
+            tag = "th" if i == 0 else "td"
+            cells_html = "".join(f"<{tag}>{_inline_format(c)}</{tag}>" for c in cells)
+            rows_html.append(f"<tr>{cells_html}</tr>")
+        html_lines.append("<table>\n" + "\n".join(rows_html) + "\n</table>")
+        table_rows.clear()
+
+    def flush_code():
+        if code_buf:
+            inner = "\n".join(code_buf)
+            html_lines.append(f"<pre><code>{html_module.escape(inner)}</code></pre>")
+            code_buf.clear()
+
+    for line in lines:
+        stripped = line.strip()
+
+        # Code blocks (fenced with ```)
+        if stripped.startswith("```"):
+            if in_code_block:
+                flush_code()
+                in_code_block = False
+            else:
+                flush_table()
+                in_code_block = True
+                code_buf = []
+            continue
+
+        if in_code_block:
+            code_buf.append(stripped)
+            continue
+
+        # Table row detection (lines with | separators, skip separator lines like |-|-|)
+        if _is_table_row(stripped):
+            # Skip separator rows (e.g., "|---|---|" or "|-------|")
+            if re.match(r"^\|?[\s\-:]+\|", stripped):
+                continue
+            if not in_table:
+                in_table = True
+            table_rows.append(stripped)
+            continue
+        else:
+            flush_table()
+            in_table = False
+
+        # Horizontal rule (only if no table context and line is only dashes/asterisks)
+        if re.match(r"^[-*_]{3,}\s*$", stripped):
+            flush_code()
+            html_lines.append("<hr>")
+            continue
+
+        # Headers
+        header_match = re.match(r"^(#{1,6})\s+(.+)$", stripped)
+        if header_match:
+            flush_code()
+            level = len(header_match.group(1))
+            text = _inline_format(html_module.escape(header_match.group(2)))
+            html_lines.append(f"<h{level}>{text}</h{level}>")
+            continue
+
+        # Blockquote
+        if stripped.startswith("> "):
+            flush_code()
+            quote_text = _inline_format(html_module.escape(stripped[2:]))
+            html_lines.append(f"<blockquote>{quote_text}</blockquote>")
+            continue
+
+        # Empty line
+        if not stripped:
+            flush_code()
+            continue
+
+        # Unordered list item
+        li_match = re.match(r"^[-*+]\s+(.+)$", stripped)
+        if li_match and not _is_table_row(stripped):
+            html_lines.append(f"<li>{_inline_format(li_match.group(1))}</li>")
+            continue
+
+        # Ordered list item
+        ol_match = re.match(r"^\d+\.\s+(.+)$", stripped)
+        if ol_match:
+            html_lines.append(f"<li>{_inline_format(ol_match.group(1))}</li>")
+            continue
+
+        # Regular paragraph (collect consecutive non-list lines)
+        flush_code()
+        formatted = _inline_format(html_module.escape(stripped))
+        html_lines.append(f"<p>{formatted}</p>")
+
+    flush_table()
+    flush_code()
+
+    body_content = "\n".join(html_lines)
+    return f"""<!DOCTYPE html>
+<html><head>
+<meta charset="utf-8">
+{title_tag}
+{css}
+</head>
+<body>
+{body_content}
+</body></html>"""
+
+
+def _inline_format(text: str) -> str:
+    """Apply inline markdown formatting (bold, italic, code)."""
+    # Inline code (must be before bold/italic to avoid conflicts)
+    text = re.sub(r"`([^`]+)`", r"<code>\1</code>", text)
+    # Bold+Italic
+    text = re.sub(r"\*\*([^*]+)\*\*", r"<strong><em>\1</em></strong>", text)
+    text = re.sub(r"___([^_]+)___", r"<strong><em>\1</em></strong>", text)
+    # Bold
+    text = re.sub(r"\*([^*]+)\*", r"<strong>\1</strong>", text)
+    text = re.sub(r"__([^_]+)__", r"<strong>\1</strong>", text)
+    # Italic
+    text = re.sub(r"_([^_]+)_", r"<em>\1</em>", text)
+    return text
+
+
+def _post_markdown(endpoint: str, md_content: str, extra_data: Optional[dict] = None) -> httpx.Response:
+    """Convert markdown to styled HTML and POST via the html endpoint.
+
+    Gotenberg's /forms/chromium/convert/markdown requires both index.html AND .md files
+    but their interaction is unclear (may render both separately). Instead, we convert
+    markdown to fully styled HTML ourselves and use /forms/chromium/convert/html which
+    only needs a single file — reliable and predictable.
+    """
+    title = extra_data.get("title") if extra_data else None
+    html_content = _markdown_to_html(md_content, title)
+    # Use the html conversion endpoint instead of markdown endpoint
+    return _post_html("/forms/chromium/convert/html", html_content, extra_data)
+
+
+def _post_screenshot_html(endpoint: str, html_content: str, extra_data: Optional[dict] = None) -> httpx.Response:
+    """POST HTML content for screenshot to Gotenberg as a file upload."""
+    import io
+    
+    files = {
+        "html": ("index.html", io.BytesIO(html_content.encode()), "text/html"),
+    }
+    
+    resp_data = extra_data or {}
+    resp = httpx.post(f"{GOTENBERG_URL}{endpoint}", files=files, data=resp_data, timeout=TIMEOUT)
+    if resp.status_code != 200:
+        resp.raise_for_status()
+    return resp
+
+
+def _post_screenshot_markdown(endpoint: str, md_content: str, extra_data: Optional[dict] = None) -> httpx.Response:
+    """Convert markdown to styled HTML and POST for screenshot.
+
+    Same approach as _post_markdown — generates styled HTML from markdown and uses
+    the html endpoint which only needs a single file.
+    """
+    title = extra_data.get("title") if extra_data else None
+    html_content = _markdown_to_html(md_content, title)
+    return _post_screenshot_html("/forms/chromium/screenshot/html", html_content, extra_data)
 
 
 def _error(msg: str) -> dict:
@@ -183,10 +432,10 @@ def convert_html_to_pdf(
     """
     output_path = _resolve_output_path("document.pdf", output_dir)
     try:
-        data = {"html": html_content}
+        extra_data = {}
         if base_url:
-            data["base_url"] = base_url
-        resp = _post_form("/forms/chromium/convert/html", data=data)
+            extra_data["base_url"] = base_url
+        resp = _post_html("/forms/chromium/convert/html", html_content, extra_data)
         output_path.write_bytes(resp.content)
         return {"status": "ok", "pdf_path": str(output_path), "size_bytes": len(resp.content)}
     except httpx.ConnectError as e:
@@ -212,10 +461,10 @@ def convert_markdown_to_pdf(
     """
     output_path = _resolve_output_path("document.pdf", output_dir)
     try:
-        data = {"markdown": md_content}
+        extra_data = {}
         if title:
-            data["title"] = title
-        resp = _post_form("/forms/chromium/convert/markdown", data=data)
+            extra_data["title"] = title
+        resp = _post_markdown("/forms/chromium/convert/markdown", md_content, extra_data)
         output_path.write_bytes(resp.content)
         return {"status": "ok", "pdf_path": str(output_path), "size_bytes": len(resp.content)}
     except httpx.ConnectError as e:
@@ -266,10 +515,10 @@ def screenshot_html(
     """
     output_path = _resolve_output_path("screenshot.png", output_dir)
     try:
-        data = {"html": html_content}
+        extra_data = {}
         if base_url:
-            data["base_url"] = base_url
-        resp = _post_form("/forms/chromium/screenshot/html", data=data)
+            extra_data["base_url"] = base_url
+        resp = _post_screenshot_html("/forms/chromium/screenshot/html", html_content, extra_data)
         output_path.write_bytes(resp.content)
         return {"status": "ok", "image_path": str(output_path), "size_bytes": len(resp.content)}
     except httpx.ConnectError as e:
@@ -295,10 +544,10 @@ def screenshot_markdown(
     """
     output_path = _resolve_output_path("screenshot.png", output_dir)
     try:
-        data = {"markdown": md_content}
+        extra_data = {}
         if title:
-            data["title"] = title
-        resp = _post_form("/forms/chromium/screenshot/markdown", data=data)
+            extra_data["title"] = title
+        resp = _post_screenshot_markdown("/forms/chromium/screenshot/markdown", md_content, extra_data)
         output_path.write_bytes(resp.content)
         return {"status": "ok", "image_path": str(output_path), "size_bytes": len(resp.content)}
     except httpx.ConnectError as e:
@@ -842,6 +1091,13 @@ def pdf_convert_pdfa(
 
 
 if __name__ == "__main__":
+    # Override host to 0.0.0.0 so Docker port mapping works
+    app.settings.host = "0.0.0.0"
+    
+    # Allow all hosts for DNS rebinding protection (safe when behind reverse proxy / Docker network)
+    if app.settings.transport_security:
+        app.settings.transport_security.enable_dns_rebinding_protection = False
+    
     transport = os.environ.get("MCP_TRANSPORT", "sse")
     if transport not in ("stdio", "sse", "streamable-http"):
         transport = "sse"

@@ -11,7 +11,7 @@ services:
     volumes:
       - ./output:/app/output  # shared output dir — Claude Code reads PDFs from here
     environment:
-      - MCP_TRANSPORT=${MCP_TRANSPORT:-streamable-http}
+      - MCP_TRANSPORT=${MCP_TRANSPORT:-sse}
       - MCP_SERVER_PORT=${MCP_SERVER_PORT:-8000}
       - MCP_API_KEY=${GOTENBERG_MCP_API_KEY:-${MCP_API_KEY:-}}
       - GOTENBERG_URL=http://gotenberg:3000
