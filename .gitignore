@@ -177,3 +177,5 @@ workspace/data
 output/
 benchmarks/
 .update-manager-proposal.json
+
+# Opencode local config with hardcoded paths/secrets

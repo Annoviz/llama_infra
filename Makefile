@@ -49,7 +49,7 @@ COMPOSE_VLLM := docker compose --project-directory $(CURDIR) \
 COMPOSE_VLLM_DL := docker compose --project-directory $(CURDIR) \
 	-f compose/vllm/00-vllm-networks.yml \
 	-f compose/vllm/90-vllm-download.yml
-LLAMA_CPP_IMAGE ?= ghcr.io/ggml-org/llama.cpp:full-cuda-b4738
+LLAMA_CPP_IMAGE ?= ghcr.io/ggml-org/llama.cpp:full-cuda13
 
 .PHONY: help help-verbose \
 	config-main config-falkor config-llama config-llama-router config-vllm config-all \
