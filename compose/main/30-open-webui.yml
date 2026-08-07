@@ -8,10 +8,13 @@ services:
       - SYS_ADMIN
     environment:
       - OLLAMA_BASE_URL=http://ollama-server:11434
+      # Use host.docker.internal to access llama-server running on your host machine
+      - OPENAI_API_BASE_URLS=http://llamacpp-router:8080
+      - OPENAI_API_KEYS=llama      
     volumes:
       - ${DATA_DIR:-./data}/open-webui:/app/backend/data
     networks:
       - ollama-bridge
     restart: always
-    depends_on:
-      - ollama-server
+    # depends_on:
+    #   - ollama-server

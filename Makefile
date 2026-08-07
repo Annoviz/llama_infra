@@ -50,6 +50,11 @@ COMPOSE_VLLM := docker compose --project-directory $(CURDIR) \
 COMPOSE_VLLM_DL := docker compose --project-directory $(CURDIR) \
 	-f compose/vllm/00-vllm-networks.yml \
 	-f compose/vllm/90-vllm-download.yml
+COMPOSE_OPEN_WEBUI := docker compose --project-directory $(CURDIR) \
+	-f compose/main/00-networks-and-volumes.yml \
+	-f compose/llama/05-llamacpp-router-networks.yml \
+	-f compose/main/30-open-webui.yml
+
 LLAMA_CPP_IMAGE ?= ghcr.io/ggml-org/llama.cpp:full-cuda13
 
 .PHONY: help help-verbose \
@@ -238,7 +243,7 @@ pull-ollama:
 	$(COMPOSE_OLLAMA) pull
 
 pull-open-webui:
-	$(COMPOSE_CORE) pull open-webui
+	$(COMPOSE_OPEN_WEBUI) pull open-webui
 
 pull-falkordb:
 	$(COMPOSE_FALKOR) pull falkordb
@@ -303,7 +308,7 @@ up-anythingllm:
 	$(COMPOSE_CORE) up -d anythingllm
 
 up-open-webui:
-	$(COMPOSE_CORE) up -d open-webui
+	$(COMPOSE_OPEN_WEBUI) up -d open-webui
 
 up-main:
 	$(COMPOSE_CORE) up -d ollama-server anythingllm open-webui
@@ -392,7 +397,7 @@ restart-anythingllm:
 	$(COMPOSE_CORE) restart anythingllm
 
 restart-open-webui:
-	$(COMPOSE_CORE) restart open-webui
+	$(COMPOSE_OPEN_WEBUI) restart open-webui
 
 restart-gotenberg:
 	$(COMPOSE_GOTENBERG) restart gotenberg gotenberg-mcp
@@ -429,7 +434,7 @@ logs-anythingllm:
 	$(COMPOSE_CORE) logs -f --tail=200 anythingllm
 
 logs-open-webui:
-	$(COMPOSE_CORE) logs -f --tail=200 open-webui
+	$(COMPOSE_OPEN_WEBUI) logs -f --tail=200 open-webui
 
 logs-gotenberg:
 	$(COMPOSE_GOTENBERG) logs -f --tail=200 gotenberg
