@@ -38,6 +38,17 @@ make updates-check    # Discover outdated packages/images
 make updates-suggest  # Generate proposal JSON
 make updates-apply    # Apply safe updates
 
+# Model management
+make models-sync        # Sync models from models-config.yaml inside ollama-server
+make download-vllm-models  # Pre-download HF models to ${MODELS}/vllm/
+
+# Benchmarking
+make perf-test [ARGS='--model foo --iterations 5']  # Raw benchmark runner
+make perf-test-planner    # → benchmarks/planner/results.json
+make perf-test-coder      # → benchmarks/coder/results.json
+make perf-test-fast-coder # Two passes for consistency check
+python3 scripts/model_regression.py --reference ref.json current.json  # Compare runs
+
 # Model config verification
 cat workspace/models/*.json   # Inspect model configs
 # Required fields: model_alias, chat_format, model path (/models/...)
@@ -118,3 +129,23 @@ Keep README.md and CHANGELOG.md aligned with implementation changes. Update work
 
 ### coding-agent
 Implement features, refactors, bug fixes in tracked source files with matching tests. Do not own stack operations (docker-ops-agent) or version bumps (update-manager-agent). Route doc-only work to docs-sync-agent.
+
+## Memory system
+
+Claude Code session memories are stored in the `llama_infra_memory` FalkorDB graph (MCP server at `http://localhost:3005`). File-based memory (`~/.claude/projects/*/memory/`) is a fallback.
+
+Query examples:
+```cypher
+MATCH (m:Memory) RETURN m.name, m.type, m.description
+MATCH (m:Memory)-[:RELATED_TO]->(t:Topic) RETURN m, t
+```
+
+## Tests
+
+Run with conda env `llama_infra`:
+```bash
+conda run -n llama_infra python3 -m pytest -v tests/
+conda run -n llama_infra python3 -m pytest --cov=. --cov-report=term-missing tests/
+```
+
+55 tests, ~63% coverage. See `tests/conftest.py` for shared fixtures and [docs/operations.md](docs/operations.md) for test writing conventions.
