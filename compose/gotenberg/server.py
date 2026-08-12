@@ -2,16 +2,27 @@
 
 Exposes tools for converting documents, web pages, and PDFs via Gotenberg
 (Chromium + LibreOffice headless). Covers all v8 modules:
-  - LibreOffice converters (DOCX/XLSX/PPTX → PDF)
-  - Chromium converters (URL/HTML/Markdown → PDF)
-  - Chromium screenshots (URL/HTML/Markdown → PNG)
+  - LibreOffice converters (DOCX/XLSX/PPTX -> PDF)
+  - Chromium converters (URL/HTML/Markdown -> PDF)
+  - Chromium screenshots (URL/HTML/Markdown -> PNG)
   - PDF engine operations (merge, split, rotate, watermark, encrypt, etc.)
+
+All tools return MCP-standard content blocks:
+  - PDF tools: [TextContent(metadata), EmbeddedResource(base64 file)]
+  - Screenshot tools: [TextContent(metadata), ImageContent(inline PNG)]
+  - Metadata tools: TextContent(JSON metadata)
+
+A resource template gotenberg://output/{filename} lets clients fetch any
+converted file on demand via resources/read.
 
 Usage:
     python server.py                     # runs on :8000
     MCP_PORT=9000 python server.py       # custom port
 """
 
+import base64
+import io
+import json
 import os
 import re
 from pathlib import Path
@@ -19,9 +30,15 @@ from typing import Optional
 
 import httpx
 from mcp.server.fastmcp import FastMCP
+from mcp.types import (
+    BlobResourceContents,
+    EmbeddedResource,
+    ImageContent,
+    TextContent,
+)
 
 GOTENBERG_URL = os.environ.get("GOTENBERG_URL", "http://gotenberg:3000")
-TIMEOUT = float(os.environ.get("GOTENBERG_TIMEOUT", "120"))  # generous for large docs
+TIMEOUT = float(os.environ.get("GOTENBERG_TIMEOUT", "120"))
 
 app = FastMCP(
     "gotenberg-converter",
@@ -30,6 +47,12 @@ app = FastMCP(
 
 
 # ── Shared helpers ────────────────────────────────────────────────────────────
+
+
+def _output_filename(input_name: str, output_ext: str) -> str:
+    """Strip original extension and append the target extension."""
+    stem = Path(input_name).stem
+    return f"{stem}{output_ext}"
 
 
 def _resolve_output_path(filename: str, output_dir: Optional[str]) -> Path:
@@ -42,24 +65,88 @@ def _resolve_output_path(filename: str, output_dir: Optional[str]) -> Path:
     return target / filename
 
 
+def _embedded_resource(path: str, file_bytes: bytes, mime_type: str) -> EmbeddedResource:
+    """Build an EmbeddedResource with base64-encoded binary data."""
+    return EmbeddedResource(
+        type="resource",
+        resource=BlobResourceContents(
+            uri=f"gotenberg://output/{Path(path).name}",
+            mimeType=mime_type,
+            blob=base64.b64encode(file_bytes).decode(),
+        ),
+    )
+
+
+def _pdf_response(path: str, file_bytes: bytes) -> list[TextContent | EmbeddedResource]:
+    """Build a standard success response: metadata JSON + embedded PDF."""
+    return [
+        TextContent(
+            type="text",
+            text=json.dumps({
+                "status": "ok",
+                "pdf_path": path,
+                "size_bytes": len(file_bytes),
+                "mime_type": "application/pdf",
+            }),
+        ),
+        _embedded_resource(path, file_bytes, "application/pdf"),
+    ]
+
+
+def _image_response(path: str, file_bytes: bytes) -> list[TextContent | ImageContent]:
+    """Build a screenshot response: metadata JSON + inline PNG image."""
+    b64 = base64.b64encode(file_bytes).decode()
+    return [
+        TextContent(
+            type="text",
+            text=json.dumps({
+                "status": "ok",
+                "image_path": path,
+                "size_bytes": len(file_bytes),
+            }),
+        ),
+        ImageContent(
+            type="image",
+            data=b64,
+            mimeType="image/png",
+        ),
+    ]
+
+
+def _zip_response(path: str, file_bytes: bytes, all_pages: list[str]) -> list[TextContent | EmbeddedResource]:
+    """Build a split-zip response: metadata JSON + embedded zip."""
+    return [
+        TextContent(
+            type="text",
+            text=json.dumps({
+                "status": "ok",
+                "zip_path": path,
+                "size_bytes": len(file_bytes),
+                "mime_type": "application/zip",
+                "all_pages": all_pages,
+            }),
+        ),
+        _embedded_resource(path, file_bytes, "application/zip"),
+    ]
+
+
+def _error_text(msg: str) -> TextContent:
+    """Build an error response as TextContent."""
+    return TextContent(
+        type="text",
+        text=json.dumps({"status": "error", "message": msg}),
+    )
+
+
 def _post_form(
     endpoint: str,
     files: Optional[dict] = None,
     data: Optional[dict] = None,
 ) -> httpx.Response:
-    """POST multipart/form-data to Gotenberg and raise on HTTP errors.
-
-    Always uses multipart/form-data even when there are no file uploads,
-    because Gotenberg rejects application/x-www-form-urlencoded with 415.
-    When files is empty/None, adds a dummy entry to force multipart encoding.
-    """
-    import io
-    
+    """POST multipart/form-data to Gotenberg and raise on HTTP errors."""
     if not files:
-        # Gotenberg requires multipart/form-data; httpx uses form-urlencoded
-        # when only data= is provided. Add a no-op file field to force multipart.
         files = {"_gotenberg_dummy": ("_", io.BytesIO(b""), "application/octet-stream")}
-    
+
     resp = httpx.post(f"{GOTENBERG_URL}{endpoint}", files=files, data=data or {}, timeout=TIMEOUT)
     if resp.status_code != 200:
         resp.raise_for_status()
@@ -67,17 +154,11 @@ def _post_form(
 
 
 def _post_html(endpoint: str, html_content: str, extra_data: Optional[dict] = None) -> httpx.Response:
-    """POST HTML content to Gotenberg as a file upload.
-
-    Gotenberg's /forms/chromium/convert/html expects the HTML content as a file
-    (index.html or an 'html' field), not as a form data field.
-    """
-    import io
-    
+    """POST HTML content to Gotenberg as a file upload."""
     files = {
         "html": ("index.html", io.BytesIO(html_content.encode()), "text/html"),
     }
-    
+
     resp_data = extra_data or {}
     resp = httpx.post(f"{GOTENBERG_URL}{endpoint}", files=files, data=resp_data, timeout=TIMEOUT)
     if resp.status_code != 200:
@@ -86,13 +167,7 @@ def _post_html(endpoint: str, html_content: str, extra_data: Optional[dict] = No
 
 
 def _markdown_to_html(md_content: str, title: Optional[str]) -> str:
-    """Convert markdown content to a styled HTML document for Chromium rendering.
-
-    Gotenberg's /forms/chromium/convert/markdown requires an index.html file with
-    actual content — sending an empty HTML results in blank PDFs. This function
-    converts common markdown syntax (headers, tables, bold, code blocks, etc.) into
-    properly styled HTML that Chromium can render as a PDF.
-    """
+    """Convert markdown content to a styled HTML document for Chromium rendering."""
     import html as html_module
 
     css = """\
@@ -136,7 +211,6 @@ a:hover { text-decoration: underline; }
     table_rows = []
 
     def _is_table_row(line: str) -> bool:
-        """Check if a line looks like a markdown table row (has | delimiters)."""
         return "|" in line and line.count("|") >= 2
 
     def flush_table():
@@ -160,7 +234,6 @@ a:hover { text-decoration: underline; }
     for line in lines:
         stripped = line.strip()
 
-        # Code blocks (fenced with ```)
         if stripped.startswith("```"):
             if in_code_block:
                 flush_code()
@@ -175,9 +248,7 @@ a:hover { text-decoration: underline; }
             code_buf.append(stripped)
             continue
 
-        # Table row detection (lines with | separators, skip separator lines like |-|-|)
         if _is_table_row(stripped):
-            # Skip separator rows (e.g., "|---|---|" or "|-------|")
             if re.match(r"^\|?[\s\-:]+\|", stripped):
                 continue
             if not in_table:
@@ -188,13 +259,11 @@ a:hover { text-decoration: underline; }
             flush_table()
             in_table = False
 
-        # Horizontal rule (only if no table context and line is only dashes/asterisks)
         if re.match(r"^[-*_]{3,}\s*$", stripped):
             flush_code()
             html_lines.append("<hr>")
             continue
 
-        # Headers
         header_match = re.match(r"^(#{1,6})\s+(.+)$", stripped)
         if header_match:
             flush_code()
@@ -203,31 +272,26 @@ a:hover { text-decoration: underline; }
             html_lines.append(f"<h{level}>{text}</h{level}>")
             continue
 
-        # Blockquote
         if stripped.startswith("> "):
             flush_code()
             quote_text = _inline_format(html_module.escape(stripped[2:]))
             html_lines.append(f"<blockquote>{quote_text}</blockquote>")
             continue
 
-        # Empty line
         if not stripped:
             flush_code()
             continue
 
-        # Unordered list item
         li_match = re.match(r"^[-*+]\s+(.+)$", stripped)
         if li_match and not _is_table_row(stripped):
             html_lines.append(f"<li>{_inline_format(li_match.group(1))}</li>")
             continue
 
-        # Ordered list item
         ol_match = re.match(r"^\d+\.\s+(.+)$", stripped)
         if ol_match:
             html_lines.append(f"<li>{_inline_format(ol_match.group(1))}</li>")
             continue
 
-        # Regular paragraph (collect consecutive non-list lines)
         flush_code()
         formatted = _inline_format(html_module.escape(stripped))
         html_lines.append(f"<p>{formatted}</p>")
@@ -249,41 +313,28 @@ a:hover { text-decoration: underline; }
 
 def _inline_format(text: str) -> str:
     """Apply inline markdown formatting (bold, italic, code)."""
-    # Inline code (must be before bold/italic to avoid conflicts)
     text = re.sub(r"`([^`]+)`", r"<code>\1</code>", text)
-    # Bold+Italic
     text = re.sub(r"\*\*([^*]+)\*\*", r"<strong><em>\1</em></strong>", text)
     text = re.sub(r"___([^_]+)___", r"<strong><em>\1</em></strong>", text)
-    # Bold
     text = re.sub(r"\*([^*]+)\*", r"<strong>\1</strong>", text)
     text = re.sub(r"__([^_]+)__", r"<strong>\1</strong>", text)
-    # Italic
     text = re.sub(r"_([^_]+)_", r"<em>\1</em>", text)
     return text
 
 
 def _post_markdown(endpoint: str, md_content: str, extra_data: Optional[dict] = None) -> httpx.Response:
-    """Convert markdown to styled HTML and POST via the html endpoint.
-
-    Gotenberg's /forms/chromium/convert/markdown requires both index.html AND .md files
-    but their interaction is unclear (may render both separately). Instead, we convert
-    markdown to fully styled HTML ourselves and use /forms/chromium/convert/html which
-    only needs a single file — reliable and predictable.
-    """
+    """Convert markdown to styled HTML and POST via the html endpoint."""
     title = extra_data.get("title") if extra_data else None
     html_content = _markdown_to_html(md_content, title)
-    # Use the html conversion endpoint instead of markdown endpoint
     return _post_html("/forms/chromium/convert/html", html_content, extra_data)
 
 
 def _post_screenshot_html(endpoint: str, html_content: str, extra_data: Optional[dict] = None) -> httpx.Response:
     """POST HTML content for screenshot to Gotenberg as a file upload."""
-    import io
-    
     files = {
         "html": ("index.html", io.BytesIO(html_content.encode()), "text/html"),
     }
-    
+
     resp_data = extra_data or {}
     resp = httpx.post(f"{GOTENBERG_URL}{endpoint}", files=files, data=resp_data, timeout=TIMEOUT)
     if resp.status_code != 200:
@@ -292,56 +343,59 @@ def _post_screenshot_html(endpoint: str, html_content: str, extra_data: Optional
 
 
 def _post_screenshot_markdown(endpoint: str, md_content: str, extra_data: Optional[dict] = None) -> httpx.Response:
-    """Convert markdown to styled HTML and POST for screenshot.
-
-    Same approach as _post_markdown — generates styled HTML from markdown and uses
-    the html endpoint which only needs a single file.
-    """
+    """Convert markdown to styled HTML and POST for screenshot."""
     title = extra_data.get("title") if extra_data else None
     html_content = _markdown_to_html(md_content, title)
     return _post_screenshot_html("/forms/chromium/screenshot/html", html_content, extra_data)
 
 
-def _error(msg: str) -> dict:
-    return {"status": "error", "message": msg}
+# ── Resource: on-demand file access ───────────────────────────────────────────
 
 
-# ── LibreOffice: Document → PDF ───────────────────────────────────────────────
+@app.resource("gotenberg://output/{filename}")
+def get_output_file(filename: str) -> bytes:
+    """Retrieve a converted file from the output directory."""
+    path = Path("/app/output") / filename
+    if not path.exists():
+        raise FileNotFoundError(f"Output file not found: {filename}")
+    return path.read_bytes()
+
+
+# ── LibreOffice: Document -> PDF ──────────────────────────────────────────────
 
 
 @app.tool()
-def convert_docx_to_pdf(doc_path: str, output_dir: Optional[str] = None) -> dict:
+def convert_docx_to_pdf(doc_path: str, output_dir: Optional[str] = None) -> list[TextContent | EmbeddedResource]:
     """Convert a DOCX/ODT Word document to PDF (LibreOffice Writer).
 
     Args:
         doc_path: Absolute path to .docx or .odt file.
-                  Inside Docker this must be accessible via the container's filesystem,
-                  or use convert_url_to_pdf() for remote URLs.
         output_dir: Optional directory for the resulting PDF. Defaults to ./output/.
 
     Returns:
-        dict with status, pdf_path, size_bytes, gotenberg_url (or error details).
+        MCP content blocks with metadata and embedded PDF file.
     """
     full = Path(doc_path)
     if not full.exists():
-        return _error(f"File not found: {full}")
+        return [_error_text(f"File not found: {full}")]
 
-    output_path = _resolve_output_path(full.with_suffix(".pdf").name, output_dir)
+    output_path = _resolve_output_path(_output_filename(full.name, ".pdf"), output_dir)
     try:
         with open(full, "rb") as f:
             resp = _post_form("/forms/libreoffice/convert/to-pdf", files={"files": (full.name, f)})
-        output_path.write_bytes(resp.content)
-        return {"status": "ok", "pdf_path": str(output_path), "size_bytes": len(resp.content)}
+        file_bytes = resp.content
+        output_path.write_bytes(file_bytes)
+        return _pdf_response(str(output_path), file_bytes)
     except httpx.ConnectError as e:
-        return _error(f"Cannot reach Gotenberg at {GOTENBERG_URL}: {e}")
+        return [_error_text(f"Cannot reach Gotenberg at {GOTENBERG_URL}: {e}")]
     except httpx.HTTPStatusError as e:
-        return _error(f"Gotenberg error HTTP {e.response.status_code}: {e.response.text[:500]}")
+        return [_error_text(f"Gotenberg error HTTP {e.response.status_code}: {e.response.text[:500]}")]
     except Exception as e:
-        return _error(str(e))
+        return [_error_text(str(e))]
 
 
 @app.tool()
-def convert_xlsx_to_pdf(spreadsheet_path: str, output_dir: Optional[str] = None) -> dict:
+def convert_xlsx_to_pdf(spreadsheet_path: str, output_dir: Optional[str] = None) -> list[TextContent | EmbeddedResource]:
     """Convert an XLSX/XLS/ODS spreadsheet to PDF (LibreOffice Calc).
 
     Args:
@@ -350,24 +404,25 @@ def convert_xlsx_to_pdf(spreadsheet_path: str, output_dir: Optional[str] = None)
     """
     full = Path(spreadsheet_path)
     if not full.exists():
-        return _error(f"File not found: {full}")
+        return [_error_text(f"File not found: {full}")]
 
-    output_path = _resolve_output_path(full.with_suffix(".pdf").name, output_dir)
+    output_path = _resolve_output_path(_output_filename(full.name, ".pdf"), output_dir)
     try:
         with open(full, "rb") as f:
             resp = _post_form("/forms/libreoffice/convert/to-pdf", files={"files": (full.name, f)})
-        output_path.write_bytes(resp.content)
-        return {"status": "ok", "pdf_path": str(output_path), "size_bytes": len(resp.content)}
+        file_bytes = resp.content
+        output_path.write_bytes(file_bytes)
+        return _pdf_response(str(output_path), file_bytes)
     except httpx.ConnectError as e:
-        return _error(f"Cannot reach Gotenberg at {GOTENBERG_URL}: {e}")
+        return [_error_text(f"Cannot reach Gotenberg at {GOTENBERG_URL}: {e}")]
     except httpx.HTTPStatusError as e:
-        return _error(f"Gotenberg error HTTP {e.response.status_code}: {e.response.text[:500]}")
+        return [_error_text(f"Gotenberg error HTTP {e.response.status_code}: {e.response.text[:500]}")]
     except Exception as e:
-        return _error(str(e))
+        return [_error_text(str(e))]
 
 
 @app.tool()
-def convert_pptx_to_pdf(presentation_path: str, output_dir: Optional[str] = None) -> dict:
+def convert_pptx_to_pdf(presentation_path: str, output_dir: Optional[str] = None) -> list[TextContent | EmbeddedResource]:
     """Convert a PPTX/PPT/ODP presentation to PDF (LibreOffice Impress).
 
     Args:
@@ -376,110 +431,123 @@ def convert_pptx_to_pdf(presentation_path: str, output_dir: Optional[str] = None
     """
     full = Path(presentation_path)
     if not full.exists():
-        return _error(f"File not found: {full}")
+        return [_error_text(f"File not found: {full}")]
 
-    output_path = _resolve_output_path(full.with_suffix(".pdf").name, output_dir)
+    output_path = _resolve_output_path(_output_filename(full.name, ".pdf"), output_dir)
     try:
         with open(full, "rb") as f:
             resp = _post_form("/forms/libreoffice/convert/to-pdf", files={"files": (full.name, f)})
-        output_path.write_bytes(resp.content)
-        return {"status": "ok", "pdf_path": str(output_path), "size_bytes": len(resp.content)}
+        file_bytes = resp.content
+        output_path.write_bytes(file_bytes)
+        return _pdf_response(str(output_path), file_bytes)
     except httpx.ConnectError as e:
-        return _error(f"Cannot reach Gotenberg at {GOTENBERG_URL}: {e}")
+        return [_error_text(f"Cannot reach Gotenberg at {GOTENBERG_URL}: {e}")]
     except httpx.HTTPStatusError as e:
-        return _error(f"Gotenberg error HTTP {e.response.status_code}: {e.response.text[:500]}")
+        return [_error_text(f"Gotenberg error HTTP {e.response.status_code}: {e.response.text[:500]}")]
     except Exception as e:
-        return _error(str(e))
+        return [_error_text(str(e))]
 
 
-# ── Chromium: Web Page → PDF ──────────────────────────────────────────────────
+# ── Chromium: Web Page -> PDF ─────────────────────────────────────────────────
 
 
 @app.tool()
-def convert_url_to_pdf(url: str, output_dir: Optional[str] = None) -> dict:
+def convert_url_to_pdf(url: str, output_dir: Optional[str] = None) -> list[TextContent | EmbeddedResource]:
     """Convert a remote web page URL to PDF (Chromium).
 
     Args:
         url: HTTP(S) URL of the web page to convert.
         output_dir: Optional directory for the resulting PDF. Defaults to ./output/.
     """
-    basename = url.rstrip("/").split("/")[-1] or "document.pdf"
-    output_path = _resolve_output_path(f"{Path(basename).with_suffix('.pdf').name}", output_dir)
+    basename = url.rstrip("/").split("/")[-1] or "document"
+    filename = _output_filename(basename, ".pdf")
+    output_path = _resolve_output_path(filename, output_dir)
     try:
         resp = _post_form("/forms/chromium/convert/url", data={"url": url})
-        output_path.write_bytes(resp.content)
-        return {"status": "ok", "pdf_path": str(output_path), "size_bytes": len(resp.content)}
+        file_bytes = resp.content
+        output_path.write_bytes(file_bytes)
+        return _pdf_response(str(output_path), file_bytes)
     except httpx.ConnectError as e:
-        return _error(f"Cannot reach Gotenberg at {GOTENBERG_URL}: {e}")
+        return [_error_text(f"Cannot reach Gotenberg at {GOTENBERG_URL}: {e}")]
     except httpx.HTTPStatusError as e:
-        return _error(f"Gotenberg error HTTP {e.response.status_code}: {e.response.text[:500]}")
+        return [_error_text(f"Gotenberg error HTTP {e.response.status_code}: {e.response.text[:500]}")]
     except Exception as e:
-        return _error(str(e))
+        return [_error_text(str(e))]
 
 
 @app.tool()
 def convert_html_to_pdf(
     html_content: str,
+    filename: Optional[str] = None,
     base_url: Optional[str] = None,
     output_dir: Optional[str] = None,
-) -> dict:
+) -> list[TextContent | EmbeddedResource]:
     """Convert raw HTML content to PDF (Chromium).
 
     Args:
         html_content: Raw HTML string.
+        filename: Desired output filename (without extension). Defaults to "document".
         base_url: Optional base URL for resolving relative resources (CSS, images).
         output_dir: Optional directory for the resulting PDF. Defaults to ./output/.
     """
-    output_path = _resolve_output_path("document.pdf", output_dir)
+    output_path = _resolve_output_path(
+        _output_filename(filename or "document", ".pdf"), output_dir
+    )
     try:
         extra_data = {}
         if base_url:
             extra_data["base_url"] = base_url
         resp = _post_html("/forms/chromium/convert/html", html_content, extra_data)
-        output_path.write_bytes(resp.content)
-        return {"status": "ok", "pdf_path": str(output_path), "size_bytes": len(resp.content)}
+        file_bytes = resp.content
+        output_path.write_bytes(file_bytes)
+        return _pdf_response(str(output_path), file_bytes)
     except httpx.ConnectError as e:
-        return _error(f"Cannot reach Gotenberg at {GOTENBERG_URL}: {e}")
+        return [_error_text(f"Cannot reach Gotenberg at {GOTENBERG_URL}: {e}")]
     except httpx.HTTPStatusError as e:
-        return _error(f"Gotenberg error HTTP {e.response.status_code}: {e.response.text[:500]}")
+        return [_error_text(f"Gotenberg error HTTP {e.response.status_code}: {e.response.text[:500]}")]
     except Exception as e:
-        return _error(str(e))
+        return [_error_text(str(e))]
 
 
 @app.tool()
 def convert_markdown_to_pdf(
     md_content: str,
+    filename: Optional[str] = None,
     title: Optional[str] = None,
     output_dir: Optional[str] = None,
-) -> dict:
+) -> list[TextContent | EmbeddedResource]:
     """Convert Markdown content to PDF (Chromium).
 
     Args:
         md_content: Raw Markdown string.
+        filename: Desired output filename (without extension). Defaults to "document".
         title: Optional page title for the generated PDF.
         output_dir: Optional directory for the resulting PDF. Defaults to ./output/.
     """
-    output_path = _resolve_output_path("document.pdf", output_dir)
+    output_path = _resolve_output_path(
+        _output_filename(filename or "document", ".pdf"), output_dir
+    )
     try:
         extra_data = {}
         if title:
             extra_data["title"] = title
         resp = _post_markdown("/forms/chromium/convert/markdown", md_content, extra_data)
-        output_path.write_bytes(resp.content)
-        return {"status": "ok", "pdf_path": str(output_path), "size_bytes": len(resp.content)}
+        file_bytes = resp.content
+        output_path.write_bytes(file_bytes)
+        return _pdf_response(str(output_path), file_bytes)
     except httpx.ConnectError as e:
-        return _error(f"Cannot reach Gotenberg at {GOTENBERG_URL}: {e}")
+        return [_error_text(f"Cannot reach Gotenberg at {GOTENBERG_URL}: {e}")]
     except httpx.HTTPStatusError as e:
-        return _error(f"Gotenberg error HTTP {e.response.status_code}: {e.response.text[:500]}")
+        return [_error_text(f"Gotenberg error HTTP {e.response.status_code}: {e.response.text[:500]}")]
     except Exception as e:
-        return _error(str(e))
+        return [_error_text(str(e))]
 
 
-# ── Chromium: Screenshot → PNG ────────────────────────────────────────────────
+# ── Chromium: Screenshot -> PNG ───────────────────────────────────────────────
 
 
 @app.tool()
-def screenshot_url(url: str, output_dir: Optional[str] = None) -> dict:
+def screenshot_url(url: str, output_dir: Optional[str] = None) -> list[TextContent | ImageContent]:
     """Capture a PNG screenshot of a web page URL (Chromium).
 
     Args:
@@ -487,82 +555,94 @@ def screenshot_url(url: str, output_dir: Optional[str] = None) -> dict:
         output_dir: Optional directory for the resulting PNG. Defaults to ./output/.
     """
     basename = url.rstrip("/").split("/")[-1] or "screenshot"
-    output_path = _resolve_output_path(f"{Path(basename).with_suffix('.png').name}", output_dir)
+    filename = _output_filename(basename, ".png")
+    output_path = _resolve_output_path(filename, output_dir)
     try:
         resp = _post_form("/forms/chromium/screenshot/url", data={"url": url})
-        output_path.write_bytes(resp.content)
-        return {"status": "ok", "image_path": str(output_path), "size_bytes": len(resp.content)}
+        file_bytes = resp.content
+        output_path.write_bytes(file_bytes)
+        return _image_response(str(output_path), file_bytes)
     except httpx.ConnectError as e:
-        return _error(f"Cannot reach Gotenberg at {GOTENBERG_URL}: {e}")
+        return [_error_text(f"Cannot reach Gotenberg at {GOTENBERG_URL}: {e}")]
     except httpx.HTTPStatusError as e:
-        return _error(f"Gotenberg error HTTP {e.response.status_code}: {e.response.text[:500]}")
+        return [_error_text(f"Gotenberg error HTTP {e.response.status_code}: {e.response.text[:500]}")]
     except Exception as e:
-        return _error(str(e))
+        return [_error_text(str(e))]
 
 
 @app.tool()
 def screenshot_html(
     html_content: str,
+    filename: Optional[str] = None,
     base_url: Optional[str] = None,
     output_dir: Optional[str] = None,
-) -> dict:
+) -> list[TextContent | ImageContent]:
     """Capture a PNG screenshot of raw HTML content (Chromium).
 
     Args:
         html_content: Raw HTML string.
+        filename: Desired output filename (without extension). Defaults to "screenshot".
         base_url: Optional base URL for relative resources.
         output_dir: Optional directory for the resulting PNG. Defaults to ./output/.
     """
-    output_path = _resolve_output_path("screenshot.png", output_dir)
+    output_path = _resolve_output_path(
+        _output_filename(filename or "screenshot", ".png"), output_dir
+    )
     try:
         extra_data = {}
         if base_url:
             extra_data["base_url"] = base_url
         resp = _post_screenshot_html("/forms/chromium/screenshot/html", html_content, extra_data)
-        output_path.write_bytes(resp.content)
-        return {"status": "ok", "image_path": str(output_path), "size_bytes": len(resp.content)}
+        file_bytes = resp.content
+        output_path.write_bytes(file_bytes)
+        return _image_response(str(output_path), file_bytes)
     except httpx.ConnectError as e:
-        return _error(f"Cannot reach Gotenberg at {GOTENBERG_URL}: {e}")
+        return [_error_text(f"Cannot reach Gotenberg at {GOTENBERG_URL}: {e}")]
     except httpx.HTTPStatusError as e:
-        return _error(f"Gotenberg error HTTP {e.response.status_code}: {e.response.text[:500]}")
+        return [_error_text(f"Gotenberg error HTTP {e.response.status_code}: {e.response.text[:500]}")]
     except Exception as e:
-        return _error(str(e))
+        return [_error_text(str(e))]
 
 
 @app.tool()
 def screenshot_markdown(
     md_content: str,
+    filename: Optional[str] = None,
     title: Optional[str] = None,
     output_dir: Optional[str] = None,
-) -> dict:
+) -> list[TextContent | ImageContent]:
     """Capture a PNG screenshot of Markdown content (Chromium).
 
     Args:
         md_content: Raw Markdown string.
+        filename: Desired output filename (without extension). Defaults to "screenshot".
         title: Optional page title.
         output_dir: Optional directory for the resulting PNG. Defaults to ./output/.
     """
-    output_path = _resolve_output_path("screenshot.png", output_dir)
+    output_path = _resolve_output_path(
+        _output_filename(filename or "screenshot", ".png"), output_dir
+    )
     try:
         extra_data = {}
         if title:
             extra_data["title"] = title
         resp = _post_screenshot_markdown("/forms/chromium/screenshot/markdown", md_content, extra_data)
-        output_path.write_bytes(resp.content)
-        return {"status": "ok", "image_path": str(output_path), "size_bytes": len(resp.content)}
+        file_bytes = resp.content
+        output_path.write_bytes(file_bytes)
+        return _image_response(str(output_path), file_bytes)
     except httpx.ConnectError as e:
-        return _error(f"Cannot reach Gotenberg at {GOTENBERG_URL}: {e}")
+        return [_error_text(f"Cannot reach Gotenberg at {GOTENBERG_URL}: {e}")]
     except httpx.HTTPStatusError as e:
-        return _error(f"Gotenberg error HTTP {e.response.status_code}: {e.response.text[:500]}")
+        return [_error_text(f"Gotenberg error HTTP {e.response.status_code}: {e.response.text[:500]}")]
     except Exception as e:
-        return _error(str(e))
+        return [_error_text(str(e))]
 
 
 # ── PDF Engine: Merge ────────────────────────────────────────────────────────
 
 
 @app.tool()
-def pdf_merge(pdf_paths: list[str], output_dir: Optional[str] = None) -> dict:
+def pdf_merge(pdf_paths: list[str], output_dir: Optional[str] = None) -> list[TextContent | EmbeddedResource]:
     """Merge multiple PDF files into a single PDF.
 
     Args:
@@ -570,26 +650,32 @@ def pdf_merge(pdf_paths: list[str], output_dir: Optional[str] = None) -> dict:
         output_dir: Optional directory for the merged output. Defaults to ./output/.
 
     Returns:
-        Dict with status, pdf_path, size_bytes (or error details).
+        MCP content blocks with metadata and embedded merged PDF.
     """
-    files_list = []
-    for p in pdf_paths:
-        full = Path(p)
-        if not full.exists():
-            return _error(f"File not found: {full}")
-        files_list.append((full.name, open(full, "rb")))
-
-    output_path = _resolve_output_path("merged.pdf", output_dir)
+    file_handles = []
     try:
+        for p in pdf_paths:
+            full = Path(p)
+            if not full.exists():
+                return [_error_text(f"File not found: {full}")]
+            file_handles.append(open(full, "rb"))
+
+        files_list = [(Path(p).name, fh) for p, fh in zip(pdf_paths, file_handles)]
+        output_path = _resolve_output_path("merged.pdf", output_dir)
+
         resp = _post_form("/forms/pdfengines/merge", files={"files": files_list})
-        output_path.write_bytes(resp.content)
-        return {"status": "ok", "pdf_path": str(output_path), "size_bytes": len(resp.content)}
+        file_bytes = resp.content
+        output_path.write_bytes(file_bytes)
+        return _pdf_response(str(output_path), file_bytes)
     except httpx.ConnectError as e:
-        return _error(f"Cannot reach Gotenberg at {GOTENBERG_URL}: {e}")
+        return [_error_text(f"Cannot reach Gotenberg at {GOTENBERG_URL}: {e}")]
     except httpx.HTTPStatusError as e:
-        return _error(f"Gotenberg error HTTP {e.response.status_code}: {e.response.text[:500]}")
+        return [_error_text(f"Gotenberg error HTTP {e.response.status_code}: {e.response.text[:500]}")]
     except Exception as e:
-        return _error(str(e))
+        return [_error_text(str(e))]
+    finally:
+        for fh in file_handles:
+            fh.close()
 
 
 # ── PDF Engine: Split ────────────────────────────────────────────────────────
@@ -600,7 +686,7 @@ def pdf_split(
     pdf_path: str,
     pages: Optional[list[int]] = None,
     output_dir: Optional[str] = None,
-) -> dict:
+) -> list[TextContent | EmbeddedResource]:
     """Split a PDF by page range or extract specific pages.
 
     Args:
@@ -609,38 +695,35 @@ def pdf_split(
         output_dir: Optional directory for extracted pages. Defaults to ./output/.
 
     Returns:
-        Dict with status, pdf_path (first page if multi-split), size_bytes, and all_pages list.
+        MCP content blocks with metadata and embedded result (PDF or zip).
     """
     full = Path(pdf_path)
     if not full.exists():
-        return _error(f"File not found: {full}")
+        return [_error_text(f"File not found: {full}")]
 
     try:
         with open(full, "rb") as f:
             files = {"files": (full.name, f)}
             data = {}
             if pages:
-                # Gotenberg expects comma-separated page ranges like "1-3,5,7"
-                page_ranges = []
-                for p in sorted(pages):
-                    page_ranges.append(str(p))
+                page_ranges = [str(p) for p in sorted(pages)]
                 data["pages"] = ",".join(page_ranges)
 
             resp = _post_form("/forms/pdfengines/split", files=files, data=data)
 
         if pages:
-            output_path = _resolve_output_path(full.with_suffix("_split.pdf").name, output_dir)
-            output_path.write_bytes(resp.content)
-            return {"status": "ok", "pdf_path": str(output_path), "size_bytes": len(resp.content)}
+            output_path = _resolve_output_path(_output_filename(full.name, "_split.pdf"), output_dir)
+            file_bytes = resp.content
+            output_path.write_bytes(file_bytes)
+            return _pdf_response(str(output_path), file_bytes)
         else:
-            # Full split: Gotenberg returns a zip archive
             import zipfile
 
-            zip_name = full.with_suffix(".zip").name
+            zip_name = _output_filename(full.name, ".zip")
             output_zip = _resolve_output_path(zip_name, output_dir)
-            output_zip.write_bytes(resp.content)
+            file_bytes = resp.content
+            output_zip.write_bytes(file_bytes)
 
-            # Extract pages to numbered files
             extracted_pages = []
             with zipfile.ZipFile(output_zip) as zf:
                 for i, info in enumerate(zf.infolist()):
@@ -648,18 +731,13 @@ def pdf_split(
                     page_out.write_bytes(zf.read(info.filename))
                     extracted_pages.append(str(page_out))
 
-            return {
-                "status": "ok",
-                "zip_path": str(output_zip),
-                "size_bytes": len(resp.content),
-                "all_pages": extracted_pages,
-            }
+            return _zip_response(str(output_zip), file_bytes, extracted_pages)
     except httpx.ConnectError as e:
-        return _error(f"Cannot reach Gotenberg at {GOTENBERG_URL}: {e}")
+        return [_error_text(f"Cannot reach Gotenberg at {GOTENBERG_URL}: {e}")]
     except httpx.HTTPStatusError as e:
-        return _error(f"Gotenberg error HTTP {e.response.status_code}: {e.response.text[:500]}")
+        return [_error_text(f"Gotenberg error HTTP {e.response.status_code}: {e.response.text[:500]}")]
     except Exception as e:
-        return _error(str(e))
+        return [_error_text(str(e))]
 
 
 # ── PDF Engine: Rotate ───────────────────────────────────────────────────────
@@ -670,42 +748,38 @@ def pdf_rotate(
     pdf_path: str,
     angles_map: Optional[dict] = None,
     output_dir: Optional[str] = None,
-) -> dict:
+) -> list[TextContent | EmbeddedResource]:
     """Rotate specific pages of a PDF.
 
     Args:
         pdf_path: Absolute path to the source .pdf file.
         angles_map: Dict mapping 1-indexed page numbers to rotation degrees (90, 180, or 270).
-                    If omitted, all pages are rotated by the default angle from data.
         output_dir: Optional directory for the result. Defaults to ./output/.
-
-    Returns:
-        Dict with status, pdf_path, size_bytes (or error details).
     """
     full = Path(pdf_path)
     if not full.exists():
-        return _error(f"File not found: {full}")
+        return [_error_text(f"File not found: {full}")]
 
     try:
         with open(full, "rb") as f:
             files = {"files": (full.name, f)}
             data = {}
             if angles_map:
-                # Gotenberg expects comma-separated page-angle pairs like "1=90,3=180"
                 pairs = ",".join(f"{page}={angle}" for page, angle in sorted(angles_map.items()))
                 data["pages-rotate"] = pairs
 
             resp = _post_form("/forms/pdfengines/rotate", files=files, data=data)
 
-        output_path = _resolve_output_path(full.with_suffix("_rotated.pdf").name, output_dir)
-        output_path.write_bytes(resp.content)
-        return {"status": "ok", "pdf_path": str(output_path), "size_bytes": len(resp.content)}
+        file_bytes = resp.content
+        output_path = _resolve_output_path(_output_filename(full.name, "_rotated.pdf"), output_dir)
+        output_path.write_bytes(file_bytes)
+        return _pdf_response(str(output_path), file_bytes)
     except httpx.ConnectError as e:
-        return _error(f"Cannot reach Gotenberg at {GOTENBERG_URL}: {e}")
+        return [_error_text(f"Cannot reach Gotenberg at {GOTENBERG_URL}: {e}")]
     except httpx.HTTPStatusError as e:
-        return _error(f"Gotenberg error HTTP {e.response.status_code}: {e.response.text[:500]}")
+        return [_error_text(f"Gotenberg error HTTP {e.response.status_code}: {e.response.text[:500]}")]
     except Exception as e:
-        return _error(str(e))
+        return [_error_text(str(e))]
 
 
 # ── PDF Engine: Watermark ────────────────────────────────────────────────────
@@ -716,38 +790,36 @@ def pdf_watermark(
     pdf_path: str,
     watermark_pdf: str,
     output_dir: Optional[str] = None,
-) -> dict:
+) -> list[TextContent | EmbeddedResource]:
     """Add a watermark overlay to each page of a PDF.
 
     Args:
         pdf_path: Absolute path to the source .pdf file.
         watermark_pdf: Absolute path to the watermark PDF (single-page recommended).
         output_dir: Optional directory for the result. Defaults to ./output/.
-
-    Returns:
-        Dict with status, pdf_path, size_bytes (or error details).
     """
     full = Path(pdf_path)
     wm = Path(watermark_pdf)
     if not full.exists():
-        return _error(f"Source file not found: {full}")
+        return [_error_text(f"Source file not found: {full}")]
     if not wm.exists():
-        return _error(f"Watermark file not found: {wm}")
+        return [_error_text(f"Watermark file not found: {wm}")]
 
     try:
         with open(full, "rb") as f1, open(wm, "rb") as f2:
             files = {"files": (full.name, f1), "watermarks": (wm.name, f2)}
             resp = _post_form("/forms/pdfengines/watermark", files=files)
 
-        output_path = _resolve_output_path(full.with_suffix("_watermarked.pdf").name, output_dir)
-        output_path.write_bytes(resp.content)
-        return {"status": "ok", "pdf_path": str(output_path), "size_bytes": len(resp.content)}
+        file_bytes = resp.content
+        output_path = _resolve_output_path(_output_filename(full.name, "_watermarked.pdf"), output_dir)
+        output_path.write_bytes(file_bytes)
+        return _pdf_response(str(output_path), file_bytes)
     except httpx.ConnectError as e:
-        return _error(f"Cannot reach Gotenberg at {GOTENBERG_URL}: {e}")
+        return [_error_text(f"Cannot reach Gotenberg at {GOTENBERG_URL}: {e}")]
     except httpx.HTTPStatusError as e:
-        return _error(f"Gotenberg error HTTP {e.response.status_code}: {e.response.text[:500]}")
+        return [_error_text(f"Gotenberg error HTTP {e.response.status_code}: {e.response.text[:500]}")]
     except Exception as e:
-        return _error(str(e))
+        return [_error_text(str(e))]
 
 
 # ── PDF Engine: Stamp ────────────────────────────────────────────────────────
@@ -759,24 +831,21 @@ def pdf_stamp(
     stamp_pdf: str,
     positions: Optional[dict] = None,
     output_dir: Optional[str] = None,
-) -> dict:
+) -> list[TextContent | EmbeddedResource]:
     """Stamp a PDF with an image or PDF overlay at specific page positions.
 
     Args:
         pdf_path: Absolute path to the source .pdf file.
         stamp_pdf: Absolute path to the stamp image/PDF file.
-        positions: Dict mapping 1-indexed pages to position config (see Gotenberg docs).
+        positions: Dict mapping 1-indexed pages to position config.
         output_dir: Optional directory for the result. Defaults to ./output/.
-
-    Returns:
-        Dict with status, pdf_path, size_bytes (or error details).
     """
     full = Path(pdf_path)
     stamp = Path(stamp_pdf)
     if not full.exists():
-        return _error(f"Source file not found: {full}")
+        return [_error_text(f"Source file not found: {full}")]
     if not stamp.exists():
-        return _error(f"Stamp file not found: {stamp}")
+        return [_error_text(f"Stamp file not found: {stamp}")]
 
     try:
         with open(full, "rb") as f1, open(stamp, "rb") as f2:
@@ -787,49 +856,48 @@ def pdf_stamp(
 
             resp = _post_form("/forms/pdfengines/stamp", files=files, data=data)
 
-        output_path = _resolve_output_path(full.with_suffix("_stamped.pdf").name, output_dir)
-        output_path.write_bytes(resp.content)
-        return {"status": "ok", "pdf_path": str(output_path), "size_bytes": len(resp.content)}
+        file_bytes = resp.content
+        output_path = _resolve_output_path(_output_filename(full.name, "_stamped.pdf"), output_dir)
+        output_path.write_bytes(file_bytes)
+        return _pdf_response(str(output_path), file_bytes)
     except httpx.ConnectError as e:
-        return _error(f"Cannot reach Gotenberg at {GOTENBERG_URL}: {e}")
+        return [_error_text(f"Cannot reach Gotenberg at {GOTENBERG_URL}: {e}")]
     except httpx.HTTPStatusError as e:
-        return _error(f"Gotenberg error HTTP {e.response.status_code}: {e.response.text[:500]}")
+        return [_error_text(f"Gotenberg error HTTP {e.response.status_code}: {e.response.text[:500]}")]
     except Exception as e:
-        return _error(str(e))
+        return [_error_text(str(e))]
 
 
 # ── PDF Engine: Flatten ──────────────────────────────────────────────────────
 
 
 @app.tool()
-def pdf_flatten(pdf_path: str, output_dir: Optional[str] = None) -> dict:
+def pdf_flatten(pdf_path: str, output_dir: Optional[str] = None) -> list[TextContent | EmbeddedResource]:
     """Flatten form fields and annotations in a PDF.
 
     Args:
         pdf_path: Absolute path to the source .pdf file (with forms).
         output_dir: Optional directory for the result. Defaults to ./output/.
-
-    Returns:
-        Dict with status, pdf_path, size_bytes (or error details).
     """
     full = Path(pdf_path)
     if not full.exists():
-        return _error(f"File not found: {full}")
+        return [_error_text(f"File not found: {full}")]
 
     try:
         with open(full, "rb") as f:
             files = {"files": (full.name, f)}
             resp = _post_form("/forms/pdfengines/flatten", files=files)
 
-        output_path = _resolve_output_path(full.with_suffix("_flattened.pdf").name, output_dir)
-        output_path.write_bytes(resp.content)
-        return {"status": "ok", "pdf_path": str(output_path), "size_bytes": len(resp.content)}
+        file_bytes = resp.content
+        output_path = _resolve_output_path(_output_filename(full.name, "_flattened.pdf"), output_dir)
+        output_path.write_bytes(file_bytes)
+        return _pdf_response(str(output_path), file_bytes)
     except httpx.ConnectError as e:
-        return _error(f"Cannot reach Gotenberg at {GOTENBERG_URL}: {e}")
+        return [_error_text(f"Cannot reach Gotenberg at {GOTENBERG_URL}: {e}")]
     except httpx.HTTPStatusError as e:
-        return _error(f"Gotenberg error HTTP {e.response.status_code}: {e.response.text[:500]}")
+        return [_error_text(f"Gotenberg error HTTP {e.response.status_code}: {e.response.text[:500]}")]
     except Exception as e:
-        return _error(str(e))
+        return [_error_text(str(e))]
 
 
 # ── PDF Engine: Encrypt ──────────────────────────────────────────────────────
@@ -841,7 +909,7 @@ def pdf_encrypt(
     owner_pw: str,
     user_pw: Optional[str] = None,
     output_dir: Optional[str] = None,
-) -> dict:
+) -> list[TextContent | EmbeddedResource]:
     """Encrypt a PDF with password-based permissions.
 
     Args:
@@ -849,13 +917,10 @@ def pdf_encrypt(
         owner_pw: Owner password (full access).
         user_pw: User password (viewing/restrictions). If omitted, anyone can open.
         output_dir: Optional directory for the result. Defaults to ./output/.
-
-    Returns:
-        Dict with status, pdf_path, size_bytes (or error details).
     """
     full = Path(pdf_path)
     if not full.exists():
-        return _error(f"File not found: {full}")
+        return [_error_text(f"File not found: {full}")]
 
     try:
         with open(full, "rb") as f:
@@ -865,15 +930,16 @@ def pdf_encrypt(
                 data["user-password"] = user_pw
             resp = _post_form("/forms/pdfengines/encrypt", files=files, data=data)
 
-        output_path = _resolve_output_path(full.with_suffix("_encrypted.pdf").name, output_dir)
-        output_path.write_bytes(resp.content)
-        return {"status": "ok", "pdf_path": str(output_path), "size_bytes": len(resp.content)}
+        file_bytes = resp.content
+        output_path = _resolve_output_path(_output_filename(full.name, "_encrypted.pdf"), output_dir)
+        output_path.write_bytes(file_bytes)
+        return _pdf_response(str(output_path), file_bytes)
     except httpx.ConnectError as e:
-        return _error(f"Cannot reach Gotenberg at {GOTENBERG_URL}: {e}")
+        return [_error_text(f"Cannot reach Gotenberg at {GOTENBERG_URL}: {e}")]
     except httpx.HTTPStatusError as e:
-        return _error(f"Gotenberg error HTTP {e.response.status_code}: {e.response.text[:500]}")
+        return [_error_text(f"Gotenberg error HTTP {e.response.status_code}: {e.response.text[:500]}")]
     except Exception as e:
-        return _error(str(e))
+        return [_error_text(str(e))]
 
 
 # ── PDF Engine: Embed File ───────────────────────────────────────────────────
@@ -884,72 +950,70 @@ def pdf_embed(
     pdf_path: str,
     file_to_attach: str,
     output_dir: Optional[str] = None,
-) -> dict:
+) -> list[TextContent | EmbeddedResource]:
     """Embed an arbitrary file as an attachment inside a PDF.
 
     Args:
         pdf_path: Absolute path to the source .pdf file.
         file_to_attach: Absolute path to the file to embed.
         output_dir: Optional directory for the result. Defaults to ./output/.
-
-    Returns:
-        Dict with status, pdf_path, size_bytes (or error details).
     """
     full = Path(pdf_path)
     attach = Path(file_to_attach)
     if not full.exists():
-        return _error(f"Source file not found: {full}")
+        return [_error_text(f"Source file not found: {full}")]
     if not attach.exists():
-        return _error(f"File to embed not found: {attach}")
+        return [_error_text(f"File to embed not found: {attach}")]
 
     try:
         with open(full, "rb") as f1, open(attach, "rb") as f2:
             files = {"files": (full.name, f1), "attachments": (attach.name, f2)}
             resp = _post_form("/forms/pdfengines/embed", files=files)
 
-        output_path = _resolve_output_path(full.with_suffix("_embedded.pdf").name, output_dir)
-        output_path.write_bytes(resp.content)
-        return {"status": "ok", "pdf_path": str(output_path), "size_bytes": len(resp.content)}
+        file_bytes = resp.content
+        output_path = _resolve_output_path(_output_filename(full.name, "_embedded.pdf"), output_dir)
+        output_path.write_bytes(file_bytes)
+        return _pdf_response(str(output_path), file_bytes)
     except httpx.ConnectError as e:
-        return _error(f"Cannot reach Gotenberg at {GOTENBERG_URL}: {e}")
+        return [_error_text(f"Cannot reach Gotenberg at {GOTENBERG_URL}: {e}")]
     except httpx.HTTPStatusError as e:
-        return _error(f"Gotenberg error HTTP {e.response.status_code}: {e.response.text[:500]}")
+        return [_error_text(f"Gotenberg error HTTP {e.response.status_code}: {e.response.text[:500]}")]
     except Exception as e:
-        return _error(str(e))
+        return [_error_text(str(e))]
 
 
 # ── PDF Engine: Metadata Read/Write ──────────────────────────────────────────
 
 
 @app.tool()
-def pdf_read_metadata(pdf_path: str) -> dict:
+def pdf_read_metadata(pdf_path: str) -> TextContent:
     """Read metadata (title, author, subject, etc.) from a PDF.
 
     Args:
         pdf_path: Absolute path to the source .pdf file.
 
     Returns:
-        Dict with status and metadata keys extracted by Chromium/PDF engines.
+        TextContent with JSON metadata extracted by Gotenberg.
     """
     full = Path(pdf_path)
     if not full.exists():
-        return _error(f"File not found: {full}")
+        return _error_text(f"File not found: {full}")
 
     try:
         with open(full, "rb") as f:
             files = {"files": (full.name, f)}
             resp = _post_form("/forms/pdfengines/metadata/read", files=files)
 
-        # Gotenberg returns JSON metadata on success
-        import json
-
-        return {"status": "ok", "metadata": resp.json()}
+        return TextContent(
+            type="text",
+            text=json.dumps({"status": "ok", "metadata": resp.json()}),
+        )
     except httpx.ConnectError as e:
-        return _error(f"Cannot reach Gotenberg at {GOTENBERG_URL}: {e}")
+        return _error_text(f"Cannot reach Gotenberg at {GOTENBERG_URL}: {e}")
     except httpx.HTTPStatusError as e:
-        return _error(f"Gotenberg error HTTP {e.response.status_code}: {e.response.text[:500]}")
+        return _error_text(f"Gotenberg error HTTP {e.response.status_code}: {e.response.text[:500]}")
     except Exception as e:
-        return _error(str(e))
+        return _error_text(str(e))
 
 
 @app.tool()
@@ -960,7 +1024,7 @@ def pdf_write_metadata(
     subject: Optional[str] = None,
     keywords: Optional[list[str]] = None,
     output_dir: Optional[str] = None,
-) -> dict:
+) -> list[TextContent | EmbeddedResource]:
     """Write/set metadata on a PDF (title, author, subject, keywords).
 
     Args:
@@ -970,13 +1034,10 @@ def pdf_write_metadata(
         subject: Subject/description.
         keywords: List of keyword strings.
         output_dir: Optional directory for the result. Defaults to ./output/.
-
-    Returns:
-        Dict with status, pdf_path, size_bytes (or error details).
     """
     full = Path(pdf_path)
     if not full.exists():
-        return _error(f"File not found: {full}")
+        return [_error_text(f"File not found: {full}")]
 
     try:
         with open(full, "rb") as f:
@@ -993,15 +1054,16 @@ def pdf_write_metadata(
 
             resp = _post_form("/forms/pdfengines/metadata/write", files=files, data=data)
 
-        output_path = _resolve_output_path(full.with_suffix("_meta.pdf").name, output_dir)
-        output_path.write_bytes(resp.content)
-        return {"status": "ok", "pdf_path": str(output_path), "size_bytes": len(resp.content)}
+        file_bytes = resp.content
+        output_path = _resolve_output_path(_output_filename(full.name, "_meta.pdf"), output_dir)
+        output_path.write_bytes(file_bytes)
+        return _pdf_response(str(output_path), file_bytes)
     except httpx.ConnectError as e:
-        return _error(f"Cannot reach Gotenberg at {GOTENBERG_URL}: {e}")
+        return [_error_text(f"Cannot reach Gotenberg at {GOTENBERG_URL}: {e}")]
     except httpx.HTTPStatusError as e:
-        return _error(f"Gotenberg error HTTP {e.response.status_code}: {e.response.text[:500]}")
+        return [_error_text(f"Gotenberg error HTTP {e.response.status_code}: {e.response.text[:500]}")]
     except Exception as e:
-        return _error(str(e))
+        return [_error_text(str(e))]
 
 
 # ── PDF Engine: Bookmarks Write ──────────────────────────────────────────────
@@ -1012,21 +1074,18 @@ def pdf_write_bookmarks(
     pdf_path: str,
     bookmarks_json: str,
     output_dir: Optional[str] = None,
-) -> dict:
+) -> list[TextContent | EmbeddedResource]:
     """Add or replace TOC bookmarks in a PDF.
 
     Args:
         pdf_path: Absolute path to the source .pdf file.
-        bookmarks_json: JSON string of bookmark tree (see Gotenberg docs for format).
+        bookmarks_json: JSON string of bookmark tree.
                         Example: '[{"Title": "Introduction", "Page": 1, "Level": 0}]'
         output_dir: Optional directory for the result. Defaults to ./output/.
-
-    Returns:
-        Dict with status, pdf_path, size_bytes (or error details).
     """
     full = Path(pdf_path)
     if not full.exists():
-        return _error(f"File not found: {full}")
+        return [_error_text(f"File not found: {full}")]
 
     try:
         with open(full, "rb") as f:
@@ -1034,15 +1093,16 @@ def pdf_write_bookmarks(
             data = {"bookmarks": bookmarks_json}
             resp = _post_form("/forms/pdfengines/bookmarks/write", files=files, data=data)
 
-        output_path = _resolve_output_path(full.with_suffix("_bookmarked.pdf").name, output_dir)
-        output_path.write_bytes(resp.content)
-        return {"status": "ok", "pdf_path": str(output_path), "size_bytes": len(resp.content)}
+        file_bytes = resp.content
+        output_path = _resolve_output_path(_output_filename(full.name, "_bookmarked.pdf"), output_dir)
+        output_path.write_bytes(file_bytes)
+        return _pdf_response(str(output_path), file_bytes)
     except httpx.ConnectError as e:
-        return _error(f"Cannot reach Gotenberg at {GOTENBERG_URL}: {e}")
+        return [_error_text(f"Cannot reach Gotenberg at {GOTENBERG_URL}: {e}")]
     except httpx.HTTPStatusError as e:
-        return _error(f"Gotenberg error HTTP {e.response.status_code}: {e.response.text[:500]}")
+        return [_error_text(f"Gotenberg error HTTP {e.response.status_code}: {e.response.text[:500]}")]
     except Exception as e:
-        return _error(str(e))
+        return [_error_text(str(e))]
 
 
 # ── PDF Engine: Convert to PDF/A / PDF/UA ────────────────────────────────────
@@ -1051,22 +1111,19 @@ def pdf_write_bookmarks(
 @app.tool()
 def pdf_convert_pdfa(
     pdf_path: str,
-    pdfa_type: str = "pdfa",  # "pdfa" (PDF/A) or "pdfua" (PDF/UA)
+    pdfa_type: str = "pdfa",
     output_dir: Optional[str] = None,
-) -> dict:
+) -> list[TextContent | EmbeddedResource]:
     """Convert a PDF to PDF/A archival format or PDF/UA universal accessibility.
 
     Args:
         pdf_path: Absolute path to the source .pdf file.
         pdfa_type: "pdfa" for PDF/A-2b (archival), "pdfua" for PDF/UA (accessibility).
         output_dir: Optional directory for the result. Defaults to ./output/.
-
-    Returns:
-        Dict with status, pdf_path, size_bytes (or error details).
     """
     full = Path(pdf_path)
     if not full.exists():
-        return _error(f"File not found: {full}")
+        return [_error_text(f"File not found: {full}")]
 
     try:
         with open(full, "rb") as f:
@@ -1074,30 +1131,25 @@ def pdf_convert_pdfa(
             data = {"type": pdfa_type}
             resp = _post_form("/forms/pdfengines/convert", files=files, data=data)
 
+        file_bytes = resp.content
         output_path = _resolve_output_path(
-            full.with_suffix(f"_{pdfa_type}.pdf").name, output_dir
+            _output_filename(full.name, f"_{pdfa_type}.pdf"), output_dir
         )
-        output_path.write_bytes(resp.content)
-        return {"status": "ok", "pdf_path": str(output_path), "size_bytes": len(resp.content)}
+        output_path.write_bytes(file_bytes)
+        return _pdf_response(str(output_path), file_bytes)
     except httpx.ConnectError as e:
-        return _error(f"Cannot reach Gotenberg at {GOTENBERG_URL}: {e}")
+        return [_error_text(f"Cannot reach Gotenberg at {GOTENBERG_URL}: {e}")]
     except httpx.HTTPStatusError as e:
-        return _error(f"Gotenberg error HTTP {e.response.status_code}: {e.response.text[:500]}")
+        return [_error_text(f"Gotenberg error HTTP {e.response.status_code}: {e.response.text[:500]}")]
     except Exception as e:
-        return _error(str(e))
+        return [_error_text(str(e))]
 
 
 # ── Entry point ───────────────────────────────────────────────────────────────
 
 
 def _build_combined_app():
-    """Build a single Starlette ASGI app serving both SSE and streamable-http transports.
-
-    Both transports share the same MCP server (same tools). Each transport manages
-    its own sessions independently — clients connect via either /sse or /mcp on the
-    same port. This mirrors the pattern used by open-websearch-mcp: a single Express/
-    Starlette app with routes for both protocols.
-    """
+    """Build a single Starlette ASGI app serving both SSE and streamable-http transports."""
     import contextlib
 
     from starlette.applications import Starlette
@@ -1110,15 +1162,12 @@ def _build_combined_app():
 
     sse_message_path = "/messages"
 
-    # Shared SSE transport — one instance handles ALL SSE connections and their sessions.
-    # Each GET /sse call creates a new session stored in this transport's internal dicts.
     sse_transport = SseServerTransport(
         sse_message_path,
         security_settings=app.settings.transport_security,
     )
 
     async def handle_sse(request: Request) -> Response:
-        """Handle GET /sse — establishes SSE connection and runs MCP protocol."""
         async with sse_transport.connect_sse(
             request.scope, request.receive, request._send  # type: ignore[attr-defined]
         ) as streams:
@@ -1127,7 +1176,6 @@ def _build_combined_app():
             )
         return Response()
 
-    # Streamable-HTTP session manager — manages sessions for /mcp endpoint
     session_manager = StreamableHTTPSessionManager(
         app=app._mcp_server,
         json_response=False,
@@ -1135,7 +1183,6 @@ def _build_combined_app():
         security_settings=app.settings.transport_security,
     )
 
-    # Thin ASGI wrapper so Starlette Route can call the session manager
     class _StreamableHttpApp:
         def __init__(self, mgr):
             self._mgr = mgr
@@ -1159,10 +1206,8 @@ def _build_combined_app():
 
 
 if __name__ == "__main__":
-    # Override host to 0.0.0.0 so Docker port mapping works
     app.settings.host = "0.0.0.0"
 
-    # Allow all hosts for DNS rebinding protection (safe when behind reverse proxy / Docker network)
     if app.settings.transport_security:
         app.settings.transport_security.enable_dns_rebinding_protection = False
 
