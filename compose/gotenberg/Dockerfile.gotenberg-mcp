@@ -3,8 +3,8 @@ FROM python:3.12-slim-bookworm
 WORKDIR /app
 COPY server.py .
 
-# FastMCP with streamable-http transport + async HTTP client for Gotenberg API
-RUN pip install --no-cache-dir "mcp>=1.0,<2.0" httpx
+# FastMCP server serving both SSE (/sse) and streamable-http (/mcp) on one port, plus async HTTP client for Gotenberg API
+RUN pip install --no-cache-dir "mcp>=1.0,<2.0" httpx starlette
 
 EXPOSE 8000
 

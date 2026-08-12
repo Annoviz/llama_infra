@@ -16,9 +16,6 @@ services:
       - ./workspace/mcp/registry.yaml:/etc/registry.yaml:ro  # MCP server registry config
     networks:
       - mcp-gateway-network
-    depends_on:
-      # Add dependent services here if needed
-      condition: service_healthy
 
 networks:
   mcp-gateway-network:
