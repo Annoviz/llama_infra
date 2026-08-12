@@ -1090,15 +1090,86 @@ def pdf_convert_pdfa(
 # ── Entry point ───────────────────────────────────────────────────────────────
 
 
+def _build_combined_app():
+    """Build a single Starlette ASGI app serving both SSE and streamable-http transports.
+
+    Both transports share the same MCP server (same tools). Each transport manages
+    its own sessions independently — clients connect via either /sse or /mcp on the
+    same port. This mirrors the pattern used by open-websearch-mcp: a single Express/
+    Starlette app with routes for both protocols.
+    """
+    import contextlib
+
+    from starlette.applications import Starlette
+    from starlette.requests import Request
+    from starlette.responses import Response
+    from starlette.routing import Mount, Route
+
+    from mcp.server.sse import SseServerTransport
+    from mcp.server.streamable_http_manager import StreamableHTTPSessionManager
+
+    sse_message_path = "/messages"
+
+    # Shared SSE transport — one instance handles ALL SSE connections and their sessions.
+    # Each GET /sse call creates a new session stored in this transport's internal dicts.
+    sse_transport = SseServerTransport(
+        sse_message_path,
+        security_settings=app.settings.transport_security,
+    )
+
+    async def handle_sse(request: Request) -> Response:
+        """Handle GET /sse — establishes SSE connection and runs MCP protocol."""
+        async with sse_transport.connect_sse(
+            request.scope, request.receive, request._send  # type: ignore[attr-defined]
+        ) as streams:
+            await app._mcp_server.run(
+                streams[0], streams[1], app._mcp_server.create_initialization_options()
+            )
+        return Response()
+
+    # Streamable-HTTP session manager — manages sessions for /mcp endpoint
+    session_manager = StreamableHTTPSessionManager(
+        app=app._mcp_server,
+        json_response=False,
+        stateless=False,
+        security_settings=app.settings.transport_security,
+    )
+
+    # Thin ASGI wrapper so Starlette Route can call the session manager
+    class _StreamableHttpApp:
+        def __init__(self, mgr):
+            self._mgr = mgr
+        async def __call__(self, scope, receive, send):
+            await self._mgr.handle_request(scope, receive, send)
+
+    @contextlib.asynccontextmanager
+    async def lifespan(starlette_app: Starlette):
+        async with session_manager.run():
+            yield
+
+    return Starlette(
+        debug=False,
+        routes=[
+            Route("/sse", endpoint=handle_sse, methods=["GET"]),
+            Mount(sse_message_path, app=sse_transport.handle_post_message),
+            Route("/mcp", endpoint=_StreamableHttpApp(session_manager), methods=["GET", "POST", "DELETE"]),
+        ],
+        lifespan=lifespan,
+    )
+
+
 if __name__ == "__main__":
     # Override host to 0.0.0.0 so Docker port mapping works
     app.settings.host = "0.0.0.0"
-    
+
     # Allow all hosts for DNS rebinding protection (safe when behind reverse proxy / Docker network)
     if app.settings.transport_security:
         app.settings.transport_security.enable_dns_rebinding_protection = False
-    
-    transport = os.environ.get("MCP_TRANSPORT", "sse")
-    if transport not in ("stdio", "sse", "streamable-http"):
-        transport = "sse"
-    app.run(transport=transport)
+
+    import uvicorn
+
+    port = int(os.environ.get("MCP_SERVER_PORT", "8000"))
+
+    starlette_app = _build_combined_app()
+    print(f"Serving both SSE (/sse) and streamable-http (/mcp) on port {port}")
+    uvicorn.run(starlette_app, host="0.0.0.0", port=port)

@@ -5,10 +5,12 @@ Document conversion stack: Gotenberg (Chromium + LibreOffice headless) with a Fa
 ## Architecture
 
 ```
-gotenberg-mcp (FastMCP, :3015)  → convert_docx_to_pdf(), convert_xlsx_to_pdf(), etc.
+gotenberg-mcp (FastMCP, :3015 — SSE + streamable-http on same port)  → convert_docx_to_pdf(), etc.
 └── gotenberg (Gotenberg v8, :3010/internal:3000)
     └── Chromium + LibreOffice headless inside container
 ```
+
+Both MCP transports (SSE and streamable-http) are served on the **same port** via a single Starlette ASGI app. This mirrors the pattern used by [open-websearch-mcp](https://github.com/aas-ee/open-websearch): routes for `/sse` (SSE) and `/mcp` (streamable-http) share one HTTP server.
 
 ## Compose Files
 
@@ -23,7 +25,15 @@ gotenberg-mcp (FastMCP, :3015)  → convert_docx_to_pdf(), convert_xlsx_to_pdf()
 ## Ports
 
 - Host → Container: `${GOTENBERG_PORT:-3010}:3000` (Gotenberg API)
-- Host → Container: `${GOTENBERG_MCP_PORT:-3015}:${MCP_SERVER_PORT:-8000}` (MCP streamable HTTP)
+- Host → Container: `${GOTENBERG_MCP_PORT:-3015}:${MCP_SERVER_PORT:-8000}` (MCP — both SSE and streamable-http)
+
+### Endpoints on port 3015
+
+| Path | Transport | Method | Purpose |
+|------|-----------|--------|---------|
+| `/sse` | SSE | GET | Establish SSE connection; client receives `endpoint` event with POST URL |
+| `/messages?session_id=...` | SSE | POST | Send JSON-RPC messages to an active SSE session |
+| `/mcp` | streamable-http | GET, POST, DELETE | Full MCP protocol (initialize, tool calls, session management) |
 
 ## Environment Variables
 
@@ -31,8 +41,8 @@ gotenberg-mcp (FastMCP, :3015)  → convert_docx_to_pdf(), convert_xlsx_to_pdf()
 |----------|---------|---------|
 | `GOTENBERG_IMAGE` | `gotenberg/gotenberg:8` | Gotenberg Docker image tag |
 | `GOTENBERG_PORT` | `3010` | Host port for Gotenberg API |
-| `GOTENBERG_MCP_PORT` | `3015` | Host port for MCP server |
-| `MCP_TRANSPORT` | `streamable-http` | MCP transport type (`sse`, `streamable-http`, or `stdio`) |
+| `GOTENBERG_MCP_PORT` | `3015` | Host port for MCP server (both transports) |
+| `MCP_TRANSPORT` | `sse` | Legacy compat; no longer affects behavior (both always active) |
 | `MCP_SERVER_PORT` | `8000` | Internal MCP container port |
 | `MCP_API_KEY` | (empty) | Optional API key auth for MCP |
 | `GOTENBERG_TIMEOUT` | `120` | HTTP timeout in seconds for conversions |
@@ -42,7 +52,11 @@ gotenberg-mcp (FastMCP, :3015)  → convert_docx_to_pdf(), convert_xlsx_to_pdf()
 Add the Gotenberg MCP server to Claude Code:
 
 ```bash
+# Streamable HTTP endpoint (recommended — single /mcp path)
 claude mcp add gotenberg -- streamable-http http://localhost:3015/mcp
+
+# SSE endpoint (legacy)
+claude mcp add gotenberg-sse -- sse http://localhost:3015/sse
 ```
 
 This registers all 20 tools (conversion, screenshot, PDF manipulation) as callable tools in Claude sessions.
