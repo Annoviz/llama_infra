@@ -9,29 +9,36 @@
                 "apiKey": "llama"
             },
             "models": {
-                "gemma-4-31B": {
-                    "name": "gemma-4-31B",
+                "Gemma-4-31B": {
+                    "name": "Gemma-4-31B",
                     "modalities": {
                         "text": {},
                         "image": {}
                     }
                 },
-                "qwen3.6-35B": {
-                    "name": "qwen3.6-35B",
+                "Qwen3.6-35B": {
+                    "name": "Qwen3.6-35B",
                     "modalities": {
                         "text": {},
                         "image": {}
                     }
                 },
-                "qwen3.6-27B": {
-                    "name": "qwen3.6-27B",
+                "Qwen3.6-27B": {
+                    "name": "Qwen3.6-27B",
                     "modalities": {
                         "text": {},
                         "image": {}
                     }
                 },
-                "qwen3.5-4B": {
-                    "name": "qwen3.5-4B",
+                "Qwen3.5-4B": {
+                    "name": "Qwen3.5-4B",
+                    "modalities": {
+                        "text": {},
+                        "image": {}
+                    }
+                },
+                "Muse-Glimmer-30B": {
+                    "name": "Muse-Glimmer-30B",
                     "modalities": {
                         "text": {},
                         "image": {}
@@ -40,7 +47,7 @@
             }
         }
     },
-    "model": "my-llama-server/qwen3.6-27B",
+    "model": "my-llama-server/Qwen3.6-27B",
     "compaction": {
         "auto": true,
         "buffer": 19200,

@@ -3,30 +3,34 @@
 # to the llamacpp-router's OpenAI-compatible backend (port 8080).
 
 model_list:
-  - model_name: planner
+  - model_name: Gemma-4-31B
     litellm_params:
-      model: openai/gemma-4-31B
+      model: openai/Gemma-4-31B
       api_base: http://llamacpp-router:8080/v1
 
-  - model_name: coder
+  - model_name: Qwen3.6-35B
     litellm_params:
-      model: openai/qwen3.6-35B
+      model: openai/Qwen3.6-35B
       api_base: http://llamacpp-router:8080/v1
 
-  - model_name: dense-coder
+  - model_name: Qwen3.6-27B
     litellm_params:
-      model: openai/qwen3.6-27B
+      model: openai/Qwen3.6-27B
       api_base: http://llamacpp-router:8080/v1
 
-  - model_name: fast-coder
+  - model_name: Qwen3.5-4B
     litellm_params:
-      model: openai/qwen3.5-4B
+      model: openai/Qwen3.5-4B
       api_base: http://llamacpp-router:8080/v1
       # Force parameters down to llama-server to turn thinking off
       # extra_body: {
       #   "reasoning": "off",
       #   "chat_template_kwargs": {"enable_thinking": false}
       # }      
+  - model_name: Muse-Glimmer-30B
+    litellm_params:
+      model: openai/Muse-Glimmer-30B
+      api_base: http://llamacpp-router:8080/v1
 
 litellm_settings:
   drop_unsupported_params: true
@@ -35,6 +39,7 @@ litellm_settings:
 
   # Enable automatic context window fallback handling
   context_window_fallback_dict:
-    planner: ["fast-coder"]
-    dense-coder: ["fast-coder"]
-    coder: ["fast-coder"]
+    Gemma-4-31B: ["Qwen3.5-4B"]
+    Qwen3.6-27B: ["Qwen3.5-4B"]
+    Qwen3.6-35B: ["Qwen3.5-4B"]
+    Muse-Glimmer-30B: ["Qwen3.5-4B"]
