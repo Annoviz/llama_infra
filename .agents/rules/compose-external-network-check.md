@@ -14,4 +14,4 @@ docker network inspect <network-name> 2>&1 | head -3
 # If it fails, create it or confirm the referencing stack creates it
 ```
 
-For `ollama-bridge`, it's created by the vLLM stack — check that first.
+For `ollama-bridge` (`llama_infra_ollama-bridge`), it's created by the **main** stack (`compose/main/00-networks-and-volumes.yml`) and referenced as `external: true` by both the vLLM and llama.cpp router stacks — start main first (or create the network) before those stacks pass `config` validation.

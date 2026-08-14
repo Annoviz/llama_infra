@@ -75,13 +75,7 @@ make check-doc-links
 
 ### 4. Fix any issues found
 
-Apply fixes before committing:
-
-- **Prefer `sed` for simple replacements** — the Edit tool can fail on stale file state:
-  ```bash
-  sed -i 's/old-text/new-text/g' path/to/file.md
-  ```
-- **Use Edit for multi-line structural changes** (adding sections, reformatting blocks)
+Apply fixes before committing, respecting the conventions checked in step 2.
 
 ### 5. Verify fixes and re-read before committing
 
@@ -90,8 +84,6 @@ After fixing:
 git diff HEAD --stat    # Confirm only intended changes remain
 git diff HEAD           # Spot-check key hunks
 ```
-
-**Important:** If you need to read a file after making edits, use `cat <file>` via Bash instead of the Read tool — it always reads from disk.
 
 ### 6. Commit with descriptive message
 

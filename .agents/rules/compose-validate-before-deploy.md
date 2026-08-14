@@ -8,9 +8,12 @@ Multi-file stacks (`docker compose -f file1.yml -f file2.yml ...`) can have subt
 
 ## How to Apply
 
-After any compose change:
+After any compose change, use the Makefile target for that stack (must-know rule: `make` over raw `docker compose`):
+
 ```bash
-docker compose --project-directory $(CURDIR) -f compose/llama/05-*.yml -f compose/llama/15-*.yml -f compose/llama/25-*.yml config 2>&1 | tail -5
+make config-llama     # llama.cpp stack
+make config-main      # main stack
+make config-all       # everything
 ```
 
-Or use the existing Makefile target if one covers the stack. If no target exists, add one (see workflow suggestion).
+If no `config-*` target covers your stack/files, add one to the Makefile (add it to `.PHONY` and to the matching aggregator like `config-all`). Never deploy a multi-file stack that was only validated file-by-file.

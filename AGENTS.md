@@ -1,6 +1,6 @@
 # AGENTS.md - llama_infra
 
-Two independent Docker stacks: **main** (Ollama + AnythingLLM + Open WebUI) and **llama.cpp** (native C++ server). Mutually exclusive with vLLM stack. Do not assume cross-stack compatibility.
+Three Docker stacks: **main** (Ollama + AnythingLLM + Open WebUI), **llama.cpp** (native C++ server, router mode is a drop-in Ollama replacement), and **vLLM** (LiteLLM gateway + engines). main / llama.cpp-router / vLLM are mutually exclusive on port 11434 — only one may run. Gotenberg MCP is a standalone stack. Do not assume cross-stack compatibility.
 
 ## Must-know rules
 
@@ -15,7 +15,7 @@ Two independent Docker stacks: **main** (Ollama + AnythingLLM + Open WebUI) and 
 | Stack | Compose files | Key services | Notes |
 |---|---|---|---|
 | Main | `compose/main/*.yml` | Ollama, AnythingLLM, Open WebUI, FalkorDB, MCPs | Default stack |
-| llama.cpp | `compose/llama/*.yml` + `docker-compose.llama.cpp.yml` | llamacpp-server, router, Python server | GPU-native inference |
+| llama.cpp | `compose/llama/*.yml` (numbered: 00 networks … 25 gateway) | llamacpp-server, router, Python server | GPU-native inference; router mode = drop-in Ollama replacement |
 | vLLM | `compose/vllm/*.yml` | LiteLLM gateway + 3 engines | Drop-in Ollama replacement on port 11434; mutually exclusive with main |
 
 Model configs live in `workspace/models/*.json`. All model paths use `/models/...` mount convention (host path from `MODELS` in `.env`).
@@ -47,7 +47,7 @@ make perf-test [ARGS='--model foo --iterations 5']  # Raw benchmark runner
 make perf-test-planner    # → benchmarks/planner/results.json
 make perf-test-coder      # → benchmarks/coder/results.json
 make perf-test-fast-coder # Two passes for consistency check
-python3 scripts/model_regression.py --reference ref.json current.json  # Compare runs
+conda run -n llama_infra python3 scripts/model_regression.py --reference ref.json current.json  # Compare runs
 
 # Model config verification
 cat workspace/models/*.json   # Inspect model configs
@@ -87,7 +87,7 @@ Negative Cases (should not route these):
 
 Prefix with type: `model:` (modelfile/model config), `infra:` (Docker/compose/Makefile), `chore:` (deps/version bumps), `docs:` (README/CHANGELOG), `test:` (tests), `fix:` (bug fixes).
 
-Format: `<type>: <short summary>\n\n<detail if needed>\n\nCo-Authored-By: Claude <noreply@anthropic.com>`
+Format: `<type>: <short summary>\n\n<detail if needed>` (no co-author trailers)
 
 ## Gotchas
 
@@ -102,6 +102,7 @@ Format: `<type>: <short summary>\n\n<detail if needed>\n\nCo-Authored-By: Claude
 
 ## Doc sources of truth
 
+- `CLAUDE.md` and `.claude/{rules,skills,plans}` / `.opencode/{rules,skills,plans}` are symlinks into this file / `.agents/` — edit the canonical AGENTS.md and `.agents/*` only.
 - Version pins: [docs/versioning.md](docs/versioning.md)
 - Service docs: [docs/services/](docs/services/)
 - Operations guide: [docs/operations.md](docs/operations.md)

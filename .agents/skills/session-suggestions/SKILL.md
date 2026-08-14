@@ -21,8 +21,8 @@ Analyze the current conversation session to suggest actionable improvements — 
 
 1. Scans the current session transcript for recurring patterns and friction points
 2. Generates suggestion categories:
-   - **[rules]** — Behavioral rules to save in `.claude/rules/` (e.g., "always run `make verify-agent-routing` after AGENTS.md changes")
-   - **[memory]** — Facts worth persisting (`~/.claude/projects/*/memory/`) so future sessions don't re-learn them
+   - **[rules]** — Behavioral rules to save in `.agents/rules/` (e.g., "always run `make verify-agent-routing` after AGENTS.md changes")
+   - **[memory]** — Facts worth persisting in the `llama_infra_memory` FalkorDB graph, with file-based fallback at `~/.claude/projects/*/memory/`, so future sessions don't re-learn them
    - **[workflow]** — Makefile targets, script improvements, or compose tweaks born from session friction
 3. Presents numbered suggestions for multi-selection
 4. Creates rule files or memory entries when accepted
@@ -69,12 +69,12 @@ The skill analyzes the current conversation by:
 
 1. Reading recent tool calls and their outcomes from the session transcript
 2. Detecting friction patterns (repeated failures, workarounds, manual steps that should be automated)
-3. Checking what's already documented in `CLAUDE.md` / `.claude/rules/` to avoid duplicates
+3. Checking what's already documented in `AGENTS.md` / `.agents/rules/` to avoid duplicates
 4. Generating concrete suggestions with file paths and example content
 
 ## Files
 
-- `.claude/rules/` — Directory where rule files are created (one per suggestion)
+- `.agents/rules/` — Directory where rule files are created (one per suggestion; `.claude/rules` and `.opencode/rules` are symlinks here, `CLAUDE.md` symlinks to `AGENTS.md`)
 - Each rule is saved as `<rule-slug>.md` with frontmatter: `name`, `description`, `trigger`
 - Memory entries go to `~/.claude/projects/*/memory/` as per the memory system
 
