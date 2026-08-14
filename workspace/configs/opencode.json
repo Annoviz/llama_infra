@@ -30,6 +30,13 @@
                         "image": {}
                     }
                 },
+                "Qwen3.8-27B": {
+                    "name": "Qwen3.8-27B",
+                    "modalities": {
+                        "text": {},
+                        "image": {}
+                    }
+                },                
                 "Qwen3.5-4B": {
                     "name": "Qwen3.5-4B",
                     "modalities": {
@@ -47,7 +54,7 @@
             }
         }
     },
-    "model": "my-llama-server/Qwen3.6-27B",
+    "model": "my-llama-server/Qwen3.8-27B",
     "compaction": {
         "auto": true,
         "buffer": 19200,

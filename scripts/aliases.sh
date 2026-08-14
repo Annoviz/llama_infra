@@ -17,11 +17,11 @@ claude-set-local() {
   export ANTHROPIC_BASE_URL=http://localhost:11434
   export ANTHROPIC_AUTH_TOKEN=ollama
   # Legacy variable (kept for compatibility, but Claude Code ignores it)
-  export ANTHROPIC_MODEL=Qwen3.6-35B
+  export ANTHROPIC_MODEL=Qwen3.8-27B
   export ANTHROPIC_DEFAULT_HAIKU_MODEL=Qwen3.5-4B
   export ANTHROPIC_DEFAULT_SONNET_MODEL=Qwen3.6-27B
   export ANTHROPIC_DEFAULT_OPUS_MODEL=Qwen3.6-35B
-  export ANTHROPIC_DEFAULT_FABLE_MODEL=Muse-Glimmer-30B
+  export ANTHROPIC_DEFAULT_FABLE_MODEL=Qwen3.8-27B
   export CLAUDE_CODE_MAX_OUTPUT_TOKENS=8192
   export CLAUDE_CODE_MAX_CONTEXT_TOKENS=131072  
   # export CLAUDE_CODE_MAX_CONTEXT_TOKENS=32768
