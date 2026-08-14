@@ -108,7 +108,7 @@ Generate a conventional commit message:
 
 ```bash
 git add <changed-files>
-git commit -m "<type>: <short summary>" -m "<detail if needed>" -m "Co-Authored-By: Claude <noreply@anthropic.com>"
+git commit -m "<type>: <short summary>" -m "<detail if needed>"
 ```
 
 ### 7. Push (only with --push flag)
