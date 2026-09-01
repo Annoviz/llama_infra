@@ -10,8 +10,10 @@ EXTRA="${VLLM_EXTRA_FLAGS:-}"
 echo "[vllm-entrypoint] Ensuring model ${REPO} is cached..."
 python3 -c "
 from huggingface_hub import scan_cache_dir
-cache = scan_cache_dir()
-repos = {r.repo_id for r in cache.repos}
+try:
+    repos = {r.repo_id for r in scan_cache_dir().repos}
+except Exception:
+    repos = set()
 target = '${REPO}'
 if target not in repos:
     from huggingface_hub import snapshot_download

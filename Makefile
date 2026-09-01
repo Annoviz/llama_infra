@@ -55,6 +55,11 @@ COMPOSE_OPEN_WEBUI := docker compose --project-directory $(CURDIR) \
 	-f compose/llama/05-llamacpp-router-networks.yml \
 	-f compose/main/30-open-webui.yml
 
+COMPOSE_LLAMA := docker compose --project-directory $(CURDIR) \
+	-f compose/llama/00-networks-and-volumes.yml \
+	-f compose/llama/10-llamacpp-native.yml \
+	-f compose/llama/20-llamacpp-py.yml
+
 LLAMA_CPP_IMAGE ?= ghcr.io/ggml-org/llama.cpp:full-cuda13
 
 .PHONY: help help-verbose \
@@ -120,12 +125,12 @@ help-verbose:
 	@printf "  make logs-vllm-fastcoder # Follow fastcoder engine logs\n"
 	@printf "  make logs-vllm-gateway   # Follow gateway (LiteLLM) logs\n"
 	@printf "\nllama.cpp stack:\n"
-	@printf "  make up-llamacpp         # Start the native llama.cpp server (port: ${LLAMA_CPP_PORT:-8080})\n"
+	@printf "  make up-llamacpp         # Start the native llama.cpp server (port: $${LLAMA_CPP_PORT:-8080})\n"
 	@printf "  make build-llamacpp-py   # Build the python llama-cpp server image\n"
 	@printf "  make up-llamacpp-py      # Start the python llama-cpp server\n"
 	@printf "  NOTE: Router mode and Ollama/vLLM are mutually exclusive (both bind 11434).\n"
 	@printf "        Stop one before starting another.\n"
-	@printf "  make up-llamacpp-router  # Start llama.cpp router mode (multi-model, port: ${LLAMA_ROUTER_PORT:-11434})\n"
+	@printf "  make up-llamacpp-router  # Start llama.cpp router mode (multi-model, port: $${LLAMA_ROUTER_PORT:-11434})\n"
 	@printf "  make down-llama          # Stop the llama.cpp stack\n"
 	@printf "\nBenchmarks:\n"
 	@printf "  make perf-test [ARGS='--model foo --iterations 5']\n"
@@ -181,9 +186,9 @@ help-verbose:
 	@printf "  OW_VERSION             : v0.8.11\n"
 	@printf "  FALKORDB_VERSION       : v4.18.10\n"
 	@printf "  FALKORDB_MCP_VERSION   : 1.2.2\n"
-	@printf "  GOTENBERG_IMAGE        : ${GOTENBERG_IMAGE:-gotenberg/gotenberg:8}\n"
-	@printf "  UNSLOTH_VERSION        : ${UNSLOTH_VERSION:-2026.5.9-pt2.10.0-vllm-0.16.0-cu12.8-studio-release-v0.1.43-beta-2026-MAY-31}\n"
-	@printf "  LLAMA_CPP_IMAGE          : ${LLAMA_CPP_IMAGE:-ghcr.io/ggml-org/llama.cpp:full-cuda13}\n"
+	@printf "  GOTENBERG_IMAGE        : $${GOTENBERG_IMAGE:-gotenberg/gotenberg:8}\n"
+	@printf "  UNSLOTH_VERSION        : $${UNSLOTH_VERSION:-2026.5.9-pt2.10.0-vllm-0.16.0-cu12.8-studio-release-v0.1.43-beta-2026-MAY-31}\n"
+	@printf "  LLAMA_CPP_IMAGE          : $${LLAMA_CPP_IMAGE:-ghcr.io/ggml-org/llama.cpp:full-cuda13}\n"
 	@printf "  LLAMA_CPP_PORT           : 8080\n"
 	@printf "  LLAMA_ROUTER_PORT        : 8080 (internal container port)\n"
 	@printf "  VLLM_GATEWAY_PORT        : 11434 (Ollama drop-in replacement via LiteLLM gateway)\n"
@@ -231,12 +236,12 @@ build-vllm:
 # Smoke test — verify compose config + upstream image tag before building
 smoke-vllm:
 	$(COMPOSE_VLLM) config > /dev/null && echo "compose OK" || (echo "compose FAILED"; exit 1)
-	docker pull vllm/vllm-openai:${VLLM_VERSION:-v0.25.0-cu129-ubuntu2404}
-	docker pull ghcr.io/berriai/litellm:${LITELLM_VERSION:-1.92.0}
+	docker pull vllm/vllm-openai:$${VLLM_VERSION:-v0.25.0-cu129-ubuntu2404}
+	docker pull ghcr.io/berriai/litellm:$${LITELLM_VERSION:-1.92.0}
 
 pull-vllm-base:
-	docker pull vllm/vllm-openai:${VLLM_VERSION:-v0.25.0-cu129-ubuntu2404}
-	docker pull ghcr.io/berriai/litellm:${LITELLM_VERSION:-1.92.0}
+	docker pull vllm/vllm-openai:$${VLLM_VERSION:-v0.25.0-cu129-ubuntu2404}
+	docker pull ghcr.io/berriai/litellm:$${LITELLM_VERSION:-1.92.0}
 
 pull-main:
 	$(COMPOSE_CORE) pull
