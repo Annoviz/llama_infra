@@ -1,4 +1,15 @@
 # Docker Image Update Changelog - March 26, 2026
+## Agent Harness Tooling - August 15, 2026
+
+### Added
+
+- **`scripts/agent-init.sh`** — standardizes agent-harness config onto the agents-standard layout: canonical `.agents/{rules,skills,plans}` (+ `AGENTS.md`) with harness dirs (`claude`, `opencode`, `cursor`, `crush`; `hermes` read-only) as relative symlinks. Scan → conflict matrix → approve → port-before-link; move-never-delete (backups in `.agent-init-backup/<ts>/`), idempotent, `--dry-run`/`--yes` modes, audit sidecar `agent-init-report.json`. Regression suite: `make tests-agent-init` (46 assertions). Contract: `.agents/plans/agent-init-overhaul-plan.md`; docs: [docs/scripts/agent-init.sh.md](docs/scripts/agent-init.sh.md)
+- **Websearch fallback rule** (`.agents/rules/websearch-fallback-to-openwebsearch.md`, user-level copy in `~/.claude/rules`) — retry via `open-websearch-mcp` when native web search fails or returns empty
+
+### Fixed
+
+- `agent-init.sh`: dry-run plan (`show_plan`) no longer lists links for canonical categories with no content (e.g. `.claude/agents` when no agents dir exists) — plan output now mirrors phase-5 execution conditions exactly; first field run validated on a second repo (73 files ported, stale pre-existing harness links repaired, idempotent re-scan clean)
+
 ## Docker Image Updates - August 07, 2026
 
 **Note:** Each update was manually approved by the user via interactive prompt.

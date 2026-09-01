@@ -177,5 +177,7 @@ workspace/data
 output/
 benchmarks/
 .update-manager-proposal.json
+agent-init-report.json
+.agent-init-backup/
 
 # Opencode local config with hardcoded paths/secrets

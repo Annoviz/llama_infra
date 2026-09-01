@@ -74,7 +74,8 @@ LLAMA_CPP_IMAGE ?= ghcr.io/ggml-org/llama.cpp:full-cuda13
 	logs-ollama logs-anythingllm logs-open-webui logs-falkordb logs-falkordb-mcp logs-unsloth logs-llamacpp logs-llamacpp-py logs-all logs-open-websearch-mcp \
 	logs-vllm-planner logs-vllm-coder logs-vllm-fastcoder logs-vllm-gateway \
 	ps-main ps-falkor ps-falkordb ps-falkordb-mcp ps-unsloth ps-llama ps-vllm ps-all ps-open-websearch-mcp \
-	gpu-host gpu-smoke-llamacpp smoke-vllm perf-test vision-test bench-vision model-rebuild clean prune
+	gpu-host gpu-smoke-llamacpp smoke-vllm perf-test vision-test bench-vision model-rebuild clean prune \
+	tests-agent-init
 
 help:
 	@printf "\nllama_infra utility targets\n\n"
@@ -162,6 +163,7 @@ help-verbose:
 	@printf "  make check-agent-docs    # Validate required headings in .github/agents/*.md\n"
 	@printf "  make verify-agent-routing # Run agent docs checker + unit tests\n"
 	@printf "  make check-doc-links     # Verify all local markdown links in README and docs/ resolve\n"
+	@printf "  make tests-agent-init      # Sandbox regression suite for scripts/agent-init.sh\n"
 	@printf "  make precommit-install   # Install pre-commit git hooks\n"
 	@printf "  make precommit-run       # Run all pre-commit hooks on all files\n"
 	@printf "  make precommit-update    # Update pinned hook revisions in .pre-commit-config.yaml\n"
@@ -555,6 +557,12 @@ bench-vision:
 		--models "$(MODEL)" \
 		--images "$(IMAGES)" \
 		--output-dir benchmarks/vision
+
+
+# ── agent-init.sh sandbox tests (fixtures C-*) ───────────────────────────────
+
+tests-agent-init:
+	@bash scripts/tests/agent-init-tests/run_tests.sh
 
 
 clean:

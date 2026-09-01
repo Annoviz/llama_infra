@@ -42,6 +42,10 @@ make updates-apply    # Apply safe updates
 make models-sync        # Sync models from models-config.yaml inside ollama-server
 make download-vllm-models  # Pre-download HF models to ${MODELS}/vllm/
 
+# Agent harness config standardization (.agents/ canonical + symlink farm)
+scripts/agent-init.sh --dry-run  # scan + report only (start here); contract: .agents/plans/agent-init-overhaul-plan.md
+make tests-agent-init            # sandbox regression suite for agent-init.sh
+
 # Benchmarking
 make perf-test [ARGS='--model foo --iterations 5']  # Raw benchmark runner
 make perf-test-planner    # → benchmarks/planner/results.json
@@ -99,6 +103,7 @@ Format: `<type>: <short summary>\n\n<detail if needed>` (no co-author trailers)
 | Hardcoded secrets in compose files | Should use `${VAR}` from `.env` |
 | vLLM + main both up on port 11434 | Port collision — stacks are mutually exclusive |
 | `docker-compose.llama.cpp.yml` doesn't exist | llama.cpp stack uses individual files under `compose/llama/*.yml` |
+| `agent-init.sh --yes` with a pending blocking conflict | aborts before any mutation (exit 1); resolve the conflict or run interactively and continue explicitly |
 
 ## Doc sources of truth
 

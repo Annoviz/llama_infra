@@ -6,6 +6,7 @@ This directory contains documentation for all scripts in the `scripts/` and `too
 
 | Script | Purpose |
 |--------|---------|
+| [agent-init.sh](agent-init.sh.md) | Standardize agent-harness config onto `.agents/` + symlinks (scan → approve → link) |
 | [aliases.sh](aliases.sh.md) | Shell aliases for Claude Cloud/Local configuration |
 | [bench.sh](bench.sh.md) | Model benchmark runner with regression comparison |
 | [build_models.sh](build_models.sh.md) | Build Ollama model aliases from Modelfiles |
