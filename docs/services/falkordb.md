@@ -7,7 +7,7 @@
 ## Compose
 - File: `compose/main/40-falkordb.yml`
 - Service name: `falkordb`
-- Image: `falkordb/falkordb:${FALKORDB_VERSION:-v4.18.11}`
+- Image: `falkordb/falkordb:${FALKORDB_VERSION:-v4.20.4}`
 
 ## Ports
 - `6379:6379`

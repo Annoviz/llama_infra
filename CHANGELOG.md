@@ -1,4 +1,31 @@
 # Docker Image Update Changelog - March 26, 2026
+## Docker Image Updates - September 01, 2026
+
+**Note:** Each update was manually approved by the user via interactive prompt.
+
+
+### Updated Docker Images
+
+- **ollama/ollama**: `0.32.6` → `0.33.2`
+- **mintplexlabs/anythingllm**: `1.15.0` → `1.16.1`
+- **open-webui/open-webui**: `v0.11.0` → `v0.11.3`
+- **falkordb/falkordb**: `v4.20.1` → `v4.20.4`
+- **vllm/vllm-openai (CUDA)**: `v0.26.0-cu129-ubuntu2404` → `v0.28.0-cu129-ubuntu2404`
+- **ghcr.io/berriai/litellm**: `1.95.0` → `1.99.0`
+
+### Updated Python Packages
+
+- **llama-cpp-python[server]**: `0.3.34` → `0.3.35`
+- **huggingface_hub**: `0.35.0` → `1.29.0`
+- **jupyter-server**: `2.20.0` → `2.21.0`
+- **notebook**: `7.6.1` → `7.6.2`
+- **uvicorn**: `0.52.1` → `0.52.4`
+- **hypothesis**: `6.165.2` → `6.167.1`
+- **pre-commit**: `4.6.1` → `4.6.2`
+- **ruff**: `0.16.1` → `0.16.5`
+
+---
+
 ## Agent Harness Tooling - August 15, 2026
 
 ### Added

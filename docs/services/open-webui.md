@@ -7,7 +7,7 @@
 ## Compose
 - File: `compose/main/30-open-webui.yml`
 - Service name: `open-webui`
-- Image: `ghcr.io/open-webui/open-webui:${OW_VERSION:-v0.8.11}`
+- Image: `ghcr.io/open-webui/open-webui:${OW_VERSION:-v0.11.3}`
 
 ## Ports
 - `3002:8080`

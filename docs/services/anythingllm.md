@@ -7,7 +7,7 @@
 ## Compose
 - File: `compose/main/20-anythingllm.yml`
 - Service name: `anythingllm`
-- Image: `mintplexlabs/anythingllm:${ANYTHINGLLM_VERSION:-1.15.0}`
+- Image: `mintplexlabs/anythingllm:${ANYTHINGLLM_VERSION:-1.16.1}`
 
 ## Ports
 - `3001:3001`

@@ -78,8 +78,8 @@ make smoke-vllm           # Validate config + pull upstream tags
 
 ## Version Tags
 
-- **vLLM**: `v0.25.0-cu129-ubuntu2404` (format: `v<semver>-cu<cuda>-ubuntu<os>`)
-- **LiteLLM**: `1.92.0`
-- **huggingface_hub**: `0.35.0` (pinned in Dockerfile)
+- **vLLM**: `v0.28.0-cu129-ubuntu2404` (format: `v<semver>-cu<cuda>-ubuntu<os>`)
+- **LiteLLM**: `1.99.0`
+- **huggingface_hub**: `1.29.0` (pinned in Dockerfile)
 
-Versions set in `.env`. Update manager (`tools/update_manager.py`) discovers latest tags from Docker Hub / PyPI.
+Versions set in `VERSIONS.env` (overridable per-environment in `.env`). Update manager (`tools/update_manager.py`) discovers latest tags from Docker Hub / PyPI. Major bumps follow the major update process in docs/operations.md.

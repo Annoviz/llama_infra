@@ -15,7 +15,7 @@ ollama-server (:11434)
 
 - **File**: `compose/main/10-ollama.yml`
 - **Service name**: `ollama-server`
-- **Image**: `ollama/ollama:${OLLAMA_VERSION:-0.31.2}`
+- **Image**: `ollama/ollama:${OLLAMA_VERSION:-0.33.2}`
 - **Port**: `11434:11434` (fixed, not configurable via `.env`)
 - **Networks**: `ollama-bridge` (shared with vLLM gateway and llama.cpp router)
 
