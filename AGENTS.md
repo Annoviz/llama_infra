@@ -104,6 +104,7 @@ Format: `<type>: <short summary>\n\n<detail if needed>` (no co-author trailers)
 | vLLM + main both up on port 11434 | Port collision — stacks are mutually exclusive |
 | `docker-compose.llama.cpp.yml` doesn't exist | llama.cpp stack uses individual files under `compose/llama/*.yml` |
 | `agent-init.sh --yes` with a pending blocking conflict | aborts before any mutation (exit 1); resolve the conflict or run interactively and continue explicitly |
+| `${VAR:-default}` in Makefile recipe | make eats it as its own (undefined) variable → empty; escape for bash as `$${VAR:-default}` (see docs/operations.md) |
 
 ## Doc sources of truth
 
