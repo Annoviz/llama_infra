@@ -27,6 +27,10 @@ model_list:
       #   "reasoning": "off",
       #   "chat_template_kwargs": {"enable_thinking": false}
       # }      
+  - model_name: Qwen3.5-9B
+    litellm_params:
+      model: openai/Qwen3.5-9B
+      api_base: http://llamacpp-router:8080/v1    
   - model_name: Muse-Glimmer-30B
     litellm_params:
       model: openai/Muse-Glimmer-30B
