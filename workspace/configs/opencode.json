@@ -11,50 +11,63 @@
             "models": {
                 "Gemma-4-31B": {
                     "name": "Gemma-4-31B",
+                    "attachment": true,
                     "modalities": {
-                        "text": {},
-                        "image": {}
+                        "input": ["text", "image"],
+                        "output": ["text"]
                     }
                 },
                 "Qwen3.6-35B": {
                     "name": "Qwen3.6-35B",
+                    "attachment": true,
                     "modalities": {
-                        "text": {},
-                        "image": {}
+                        "input": ["text", "image"],
+                        "output": ["text"]
                     }
                 },
                 "Qwen3.6-27B": {
                     "name": "Qwen3.6-27B",
+                    "attachment": true,
                     "modalities": {
-                        "text": {},
-                        "image": {}
+                        "input": ["text", "image"],
+                        "output": ["text"]
                     }
                 },
                 "Qwen3.8-27B": {
                     "name": "Qwen3.8-27B",
+                    "attachment": true,
                     "modalities": {
-                        "text": {},
-                        "image": {}
+                        "input": ["text", "image"],
+                        "output": ["text"]
                     }
                 },                
                 "Qwen3.5-4B": {
                     "name": "Qwen3.5-4B",
+                    "attachment": true,
                     "modalities": {
-                        "text": {},
-                        "image": {}
+                        "input": ["text", "image"],
+                        "output": ["text"]
                     }
                 },
                 "Muse-Glimmer-30B": {
                     "name": "Muse-Glimmer-30B",
+                    "attachment": true,
                     "modalities": {
-                        "text": {},
-                        "image": {}
+                        "input": ["text", "image"],
+                        "output": ["text"]
                     }
                 }
             }
         }
     },
     "model": "my-llama-server/Qwen3.8-27B",
+    "mcp": {
+        "open-websearch": {
+            "type": "remote",
+            "url": "http://localhost:5050/mcp",
+            "enabled": true
+        }
+    },
     "compaction": {
         "auto": true,
         "buffer": 19200,
