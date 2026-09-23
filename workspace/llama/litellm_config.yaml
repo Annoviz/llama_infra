@@ -36,6 +36,11 @@ model_list:
       model: openai/Muse-Glimmer-30B
       api_base: http://llamacpp-router:8080/v1
 
+  - model_name: Ternary-Bonsai-2-27B
+    litellm_params:
+      model: openai/Ternary-Bonsai-2-27B
+      api_base: http://llamacpp-router:8080/v1
+
 litellm_settings:
   drop_unsupported_params: true
   # Change to true if debugging routing failures

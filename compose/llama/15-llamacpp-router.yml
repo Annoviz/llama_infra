@@ -2,10 +2,17 @@
 
 services:
   llamacpp-router:
-    image: ${LLAMA_CPP_IMAGE:-ghcr.io/ggml-org/llama.cpp:full-cuda13}
+    image: ${LLAMA_CPP_FULL_IMAGE:-ghcr.io/ggml-org/llama.cpp:full-cuda13}
     shm_size: '8gb'
     container_name: llamacpp-router
     entrypoint: ["/app/scripts/entrypoint.llamacpp-router.sh"]
+    build:
+      network: host
+      context: .
+      dockerfile: compose/llama/Dockerfile.llamacpp-server-prism-ml
+      args:
+        BASE_IMAGE: ${LLAMA_CPP_IMAGE:-ghcr.io/ggml-org/llama.cpp:full-cuda13}
+        PRISM_LM_VERSION: ${PRISM_LM_VERSION:-b10709-9a9394a}
     ulimits:
       memlock: -1
     networks:
@@ -24,8 +31,10 @@ services:
       - ${MODELS:-./models}:/models:ro
       - ./workspace/models/router-preset.ini:/app/router-preset.ini:ro
       - ./scripts/entrypoint.llamacpp-router.sh:/app/scripts/entrypoint.llamacpp-router.sh:ro
+      - ./workspace:/app/workspace
     environment:
       LLAMA_ARG_UI_MCP_PROXY: true
+      PRISM_LM: ${PRISM_LM:-1}
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
       interval: 30s

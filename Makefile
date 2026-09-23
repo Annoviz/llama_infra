@@ -66,7 +66,7 @@ LLAMA_CPP_IMAGE ?= ghcr.io/ggml-org/llama.cpp:full-cuda13
 	config-main config-falkor config-llama config-llama-router config-vllm config-all \
 	config-gotenberg config-unsloth config-open-webui \
 	pull-main pull-ollama pull-open-webui pull-falkor pull-falkordb pull-falkordb-mcp pull-gotenberg pull-unsloth pull-llama pull-vllm-base pull-all \
-	build-llamacpp-py build-vllm models-sync \
+	build-llamacpp-py build-llamacpp-router build-vllm models-sync \
 	updates-check updates-suggest updates-apply \
 	check-agent-docs verify-agent-routing check-doc-links \
 	precommit-install precommit-run precommit-update \
@@ -130,6 +130,7 @@ help-verbose:
 	@printf "  make up-llamacpp-py      # Start the python llama-cpp server\n"
 	@printf "  NOTE: Router mode and Ollama/vLLM are mutually exclusive (both bind 11434).\n"
 	@printf "        Stop one before starting another.\n"
+	@printf "  make build-llamacpp-router # Build router image with PrismML support (PRISM_LM_VERSION)\n"
 	@printf "  make up-llamacpp-router  # Start llama.cpp router mode (multi-model, port: $${LLAMA_ROUTER_PORT:-11434})\n"
 	@printf "  make down-llama          # Stop the llama.cpp stack\n"
 	@printf "\nBenchmarks:\n"
@@ -345,6 +346,9 @@ up-llamacpp-py:
 up-llamacpp-router:
 	@printf "NOTE: Router binds port 11434 — stop Ollama and vLLM first.\n"
 	$(COMPOSE_LLAMA_ROUTER) up -d
+
+build-llamacpp-router:
+	$(COMPOSE_LLAMA_ROUTER) build llamacpp-router
 
 down-llamacpp-router:
 	$(COMPOSE_LLAMA_ROUTER) down

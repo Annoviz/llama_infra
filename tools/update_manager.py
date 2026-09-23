@@ -39,6 +39,7 @@ DOCKER_COMPOSE_LLAMA_ROUTER = ROOT / "compose/llama/15-llamacpp-router.yml"
 DOCKER_COMPOSE_LLAMA_PY = ROOT / "compose/llama/20-llamacpp-py.yml"
 DOCKER_COMPOSE_LLAMA_GATEWAY = ROOT / "compose/llama/25-llamacpp-router-gateway.yml"
 DOCKERFILE_LLAMA_PY = ROOT / "compose/llama/Dockerfile.llamacpp-server-python"
+DOCKERFILE_LLAMA_PRISM = ROOT / "compose/llama/Dockerfile.llamacpp-server-prism-ml"
 DOCKER_COMPOSE_VLLM_ENGINE_BASE = ROOT / "compose/vllm/05-vllm-engine-base.yml"
 DOCKER_COMPOSE_VLLM_GATEWAY = ROOT / "compose/vllm/40-vllm-gateway.yml"
 DOCKERFILE_VLLM = ROOT / "compose/vllm/Dockerfile.vllm"
@@ -68,6 +69,7 @@ VERSION_COMPOSE_MAP: Dict[str, Path] = {
     "UNSLOTH_VERSION": DOCKER_COMPOSE_UNSLOTH,
     "MCP_GATEWAY_VERSION": ROOT / "compose/main/70-mcp-gateway.yml",
     "LLAMA_CPP_IMAGE": DOCKER_COMPOSE_LLAMA_NATIVE,
+    "LLAMA_CPP_FULL_IMAGE": DOCKER_COMPOSE_LLAMA_ROUTER,
     "BASE_IMAGE": DOCKER_COMPOSE_LLAMA_PY,
     "LLAMA_CPP_VERSION": DOCKER_COMPOSE_LLAMA_PY,
     "VLLM_VERSION": DOCKERFILE_VLLM,
@@ -255,7 +257,8 @@ def _write_versions_env(updates: Dict[str, str]) -> None:
         ("--- Main Stack ---", ["OLLAMA_VERSION", "ANYTHINGLLM_VERSION", "OW_VERSION",
                                  "FALKORDB_VERSION", "FALKORDB_MCP_VERSION", "UNSLOTH_VERSION",
                                  "MCP_GATEWAY_VERSION"]),
-        ("--- llama.cpp Stack ---", ["LLAMA_CPP_IMAGE", "BASE_IMAGE", "LLAMA_CPP_VERSION"]),
+        ("--- llama.cpp Stack ---", ["LLAMA_CPP_IMAGE", "LLAMA_CPP_FULL_IMAGE", "BASE_IMAGE",
+                                      "LLAMA_CPP_VERSION", "PRISM_LM_VERSION", "PRISM_LM"]),
         ("--- vLLM Stack ---", ["VLLM_VERSION", "LITELLM_VERSION", "HUGGINGFACE_HUB_VERSION"]),
     ]
 
@@ -311,6 +314,24 @@ def github_release_version(owner: str, repo: str) -> Optional[str]:
         return data.get("tag_name")
     except Exception:
         return None
+
+
+def github_prism_version() -> Tuple[Optional[str], Optional[str]]:
+    """Get latest PrismML-Eng/llama.cpp release.
+
+    Returns (version, date) where version is the release tag without the
+    'prism-' prefix (e.g., 'b10709-9a9394a') and date is YYYY-MM-DD or None.
+    Returns (None, None) on error or non-conforming tag.
+    """
+    try:
+        data = fetch_json("https://api.github.com/repos/PrismML-Eng/llama.cpp/releases/latest")
+    except Exception:
+        return None, None
+    tag = data.get("tag_name") or ""
+    if not tag.startswith("prism-"):
+        return None, None
+    date = (data.get("published_at") or "")[:10] or None
+    return tag[len("prism-"):], date
 
 
 def parse_requirements_line(
@@ -446,6 +467,24 @@ def discover_docker_updates() -> List[UpdateItem]:
                     source_file=DOCKER_COMPOSE_LLAMA_PY, current=current_py_ver,
                     latest=latest, applyable=is_newer(latest, current_py_ver),
                     reason="PyPI",
+                )
+            )
+
+    # PrismML llama.cpp fork (Q1_0 ternary quantization) — GitHub releases
+    current_prism = ver.get("PRISM_LM_VERSION")
+    if current_prism:
+        try:
+            latest_prism, prism_date = github_prism_version()
+        except (error.HTTPError, error.URLError):
+            latest_prism, prism_date = None, None
+        if latest_prism:
+            items.append(
+                UpdateItem(
+                    kind="docker", name="PrismML-Eng/llama.cpp (PrismLM)",
+                    source_file=DOCKERFILE_LLAMA_PRISM, current=current_prism,
+                    latest=latest_prism, applyable=is_newer(latest_prism, current_prism),
+                    reason="GitHub release (PrismML fork)",
+                    date=prism_date,
                 )
             )
 
@@ -656,6 +695,31 @@ def build_replacements(items: Sequence[UpdateItem]) -> List[Replacement]:
                     new=r"ARG LLAMA_CPP_VERSION=" + item.latest,
                 )
             )
+        elif item.name == "PrismML-Eng/llama.cpp (PrismLM)":
+            # Router compose build arg (read actual current default from file)
+            if DOCKER_COMPOSE_LLAMA_ROUTER.exists():
+                router_text = DOCKER_COMPOSE_LLAMA_ROUTER.read_text(encoding="utf-8")
+                m_router = re.search(r"PRISM_LM_VERSION: \$\{PRISM_LM_VERSION:-([^}]+)\}", router_text)
+                if m_router:
+                    replacements.append(
+                        Replacement(
+                            source_file=DOCKER_COMPOSE_LLAMA_ROUTER,
+                            old=f"PRISM_LM_VERSION: ${{PRISM_LM_VERSION:-{m_router.group(1)}}}",
+                            new=f"PRISM_LM_VERSION: ${{PRISM_LM_VERSION:-{item.latest}}}",
+                        )
+                    )
+
+            # Prism Dockerfile base ARG
+            df_text = DOCKERFILE_LLAMA_PRISM.read_text(encoding="utf-8") if DOCKERFILE_LLAMA_PRISM.exists() else ""
+            m_prism = re.search(r"ARG PRISM_LM_VERSION=(\S+)", df_text)
+            if m_prism:
+                replacements.append(
+                    Replacement(
+                        source_file=DOCKERFILE_LLAMA_PRISM,
+                        old=f"ARG PRISM_LM_VERSION={m_prism.group(1)}",
+                        new=f"ARG PRISM_LM_VERSION={item.latest}",
+                    )
+                )
         elif item.name == "vllm/vllm-openai (CUDA)":
             # Update Dockerfile ARG (read actual current from file)
             df_text = DOCKERFILE_VLLM.read_text(encoding="utf-8") if DOCKERFILE_VLLM.exists() else ""
@@ -930,6 +994,7 @@ def run_apply(args: argparse.Namespace) -> int:
         elif item.name == "unsloth/unsloth": var_name = "UNSLOTH_VERSION"
         elif item.name.startswith("ghcr.io/ggml-org/llama.cpp:"): var_name = "LLAMA_CPP_IMAGE"
         elif item.name == "llama-cpp-python[server]": var_name = "LLAMA_CPP_VERSION"
+        elif item.name == "PrismML-Eng/llama.cpp (PrismLM)": var_name = "PRISM_LM_VERSION"
         elif item.name == "vllm/vllm-openai (CUDA)": var_name = "VLLM_VERSION"
         elif item.name == "huggingface_hub": var_name = "HUGGINGFACE_HUB_VERSION"
         elif item.name == "ghcr.io/berriai/litellm": var_name = "LITELLM_VERSION"

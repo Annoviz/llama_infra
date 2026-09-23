@@ -115,6 +115,8 @@ set -euo pipefail
 
 PRESET="${LLAMA_ROUTER_PRESET:-/app/router-preset.ini}"
 MODELS_MAX="${LLAMA_ROUTER_MODELS_MAX:-2}"
+PRISM_LM="${PRISM_LM:-0}"  # Default to 0 if not set
+LLAMA_SERVER_BIN="/app/llama-server"
 PORT=8080  # Fixed internal port; host mapping handled by Docker Compose
 
 if [[ ! -f "${PRESET}" ]]; then
@@ -122,14 +124,32 @@ if [[ ! -f "${PRESET}" ]]; then
     exit 1
 fi
 
-echo "[llama-router] Preset: ${PRESET}, max models: ${MODELS_MAX}, port: PORT}"
+echo "[llama-router] Preset: ${PRESET}, max models: ${MODELS_MAX}, port: ${PORT}, PRISM_LM: ${PRISM_LM}"
+if [[ "${PRISM_LM}" -eq 1 ]]; then
+    echo "[llama-router] PrismLM support is enabled."
+    LLAMA_SERVER_BIN="/app/prism-ml/llama-server"
+else
+    echo "[llama-router] PrismLM support is disabled."
+fi
 
-exec /app/llama-server \
+exec "${LLAMA_SERVER_BIN}" \
     --models-preset "${PRESET}" \
     --models-max "${MODELS_MAX}" \
     --port "${PORT}" \
     --host "0.0.0.0"
 ```
+
+### PrismLM (PrismML fork)
+
+The router image can be built with the [PrismML llama.cpp fork](https://github.com/PrismML-Eng/llama.cpp), which adds Q1_0 (1-bit ternary) quantization support (e.g. `Ternary-Bonsai-2-27B`):
+
+```bash
+make build-llamacpp-router  # Builds from Dockerfile.llamacpp-server-prism-ml
+make up-llamacpp-router
+```
+
+- `PRISM_LM` (env, default `1` in VERSIONS.env) — runtime switch: `1` runs `/app/prism-ml/llama-server`, `0` runs the stock `/app/llama-server` from the base image
+- `PRISM_LM_VERSION` (VERSIONS.env) — pinned release, e.g. `b10709-9a9394a` (release tag without the `prism-` prefix); updated via `make updates-check/suggest/apply`
 
 ### Multi-Model Concurrent Loading
 
